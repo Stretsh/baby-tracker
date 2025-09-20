@@ -1,0 +1,23 @@
+{
+  "name": "baby-feeding-tracker",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^0.5.2",
+    "@tailwindcss/vite": "^4.1.0",
+    "nuxt": "^4.1.2",
+    "pg": "^8.13.1",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.7.2",
+    "vue-tsc": "^2.1.10"
+  },
+  "dependencies": {
+    "luxon": "^3.7.2"
+  }
+}

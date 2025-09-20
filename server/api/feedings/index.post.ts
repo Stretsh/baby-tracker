@@ -1,0 +1,54 @@
+import { query } from '../../utils/database'
+
+export default defineEventHandler(async (event) => {
+  try {
+    const body = await readBody(event)
+    const { feeding_time, food_type, notes } = body
+
+    // Validate required fields
+    if (!feeding_time) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'feeding_time is required'
+      })
+    }
+
+    // food_type is optional for quick save
+
+    // Insert the new feeding record
+    const sql = `
+      INSERT INTO feeding_records (feeding_time, food_type, notes)
+      VALUES ($1, $2, $3)
+      RETURNING id, feeding_time, food_type, notes, created_at, updated_at
+    `
+
+    const result = await query(sql, [feeding_time, food_type || '', notes || ''])
+
+    if (result.rows.length === 0) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Failed to create feeding record'
+      })
+    }
+
+    return {
+      success: true,
+      message: 'Feeding saved successfully',
+      feeding: result.rows[0]
+    }
+  } catch (error) {
+    console.error('Error creating feeding:', error)
+    
+    if (error.statusCode) {
+      return {
+        success: false,
+        message: error.statusMessage || 'Failed to save feeding'
+      }
+    }
+
+    return {
+      success: false,
+      message: 'Failed to create feeding record'
+    }
+  }
+})
