@@ -47,6 +47,8 @@
 </template>
 
 <script setup>
+import { DateTime } from 'luxon'
+
 const isLoading = ref(false)
 const showFoodButtons = ref(false)
 const { addFeeding } = useFeedings()
@@ -75,7 +77,7 @@ const saveWithFood = async (food) => {
     const response = await $fetch('/api/feedings', {
       method: 'POST',
       body: {
-        feeding_time: new Date().toISOString(),
+        feeding_time: DateTime.now().toISO(),
         food_type: food,
         notes: ''
       }
@@ -98,28 +100,22 @@ const saveWithFood = async (food) => {
 }
 
 const quickSave = async () => {
-  console.log('Quick save clicked')
   isLoading.value = true
   
   try {
     const response = await $fetch('/api/feedings', {
       method: 'POST',
       body: {
-        feeding_time: new Date().toISOString(),
+        feeding_time: DateTime.now().toISO(),
         food_type: '',
         notes: ''
       }
     })
     
-    console.log('API response:', response)
-    
     if (response.success) {
-      console.log('Adding feeding to store:', response.feeding)
       addFeeding(response.feeding)
-      console.log('Showing success toast:', response.message)
       showSuccess(response.message)
     } else {
-      console.log('API returned error:', response.message)
       showError(response.message)
     }
     

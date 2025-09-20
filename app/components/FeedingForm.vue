@@ -88,12 +88,9 @@ const autoResize = () => {
 // Watch for changes in initialData (for editing)
 watch(() => props.initialData, (newData) => {
   if (newData) {
-    // Convert ISO string to datetime-local format for editing
+    // Convert UTC time from database to local time for datetime-local input
     if (newData.feeding_time && props.isEditing) {
-      const date = new Date(newData.feeding_time)
-      const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 16)
+      const localDateTime = DateTime.fromISO(newData.feeding_time).toLocal().toFormat('yyyy-MM-dd\'T\'HH:mm')
       formData.value = {
         ...newData,
         feeding_time: localDateTime

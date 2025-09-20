@@ -77,9 +77,10 @@ const { updateFeeding: updateFeedingInStore, removeFeeding } = useFeedings()
 const { showSuccess, showError } = useToast()
 
 const formatTime = (dateString) => {
-  const dt = DateTime.fromISO(dateString, { zone: 'utc' })
+  // Convert UTC from database to local time for display
+  const dt = DateTime.fromISO(dateString).toLocal()
   
-  // Format: dd.mm, HH:mm (24-hour format) - display as UTC to avoid timezone conversion
+  // Format: dd.mm, HH:mm (24-hour format)
   return dt.toFormat('d.M, HH:mm')
 }
 
@@ -87,9 +88,8 @@ const formatTime = (dateString) => {
 const preparedFeedingData = computed(() => {
   if (!props.feeding) return null
   
-  // Convert UTC time back to the format that datetime-local expects
-  const dt = DateTime.fromISO(props.feeding.feeding_time, { zone: 'utc' })
-  const localTimeString = dt.toFormat('yyyy-MM-dd\'T\'HH:mm')
+  // Convert UTC time to local time for datetime-local input
+  const localTimeString = DateTime.fromISO(props.feeding.feeding_time).toLocal().toFormat('yyyy-MM-dd\'T\'HH:mm')
   
   return {
     ...props.feeding,

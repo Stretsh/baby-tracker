@@ -4,11 +4,8 @@ export const useFeedings = () => {
   const feedings = useState('feedings', () => [])
   
   const addFeeding = (feeding) => {
-    console.log('useFeedings: addFeeding called with:', feeding)
-    console.log('useFeedings: current feedings array:', feedings.value)
     // Add to top of array (newest first)
     feedings.value.unshift(feeding)
-    console.log('useFeedings: feedings array after adding:', feedings.value)
   }
   
   const updateFeeding = (updatedFeeding) => {

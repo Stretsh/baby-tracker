@@ -16,6 +16,8 @@
 </template>
 
 <script setup>
+import { DateTime } from 'luxon'
+
 const isLoading = ref(false)
 
 // Fetch recent food types (top 6 most used)
@@ -32,14 +34,11 @@ const saveWithFood = async (food) => {
     const _response = await $fetch('/api/feedings', {
       method: 'POST',
       body: {
-        feeding_time: new Date().toISOString(),
+        feeding_time: DateTime.now().toISO(),
         food_type: food,
         notes: ''
       }
     })
-    
-    // Show success feedback
-    console.log(`Feeding saved! ${food} feeding recorded.`)
     
     // Refresh the page to show the new entry
     await navigateTo({ query: { ...useRoute().query } })

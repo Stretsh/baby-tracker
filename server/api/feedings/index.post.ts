@@ -1,4 +1,5 @@
 import { query } from '../../utils/database'
+import { DateTime } from 'luxon'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -13,7 +14,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // food_type is optional for quick save
+    // Convert local time to UTC for storage
+    const utcTime = DateTime.fromISO(feeding_time).toUTC().toISO()
 
     // Insert the new feeding record
     const sql = `
@@ -22,7 +24,7 @@ export default defineEventHandler(async (event) => {
       RETURNING id, feeding_time, food_type, notes, created_at, updated_at
     `
 
-    const result = await query(sql, [feeding_time, food_type || '', notes || ''])
+    const result = await query(sql, [utcTime, food_type || '', notes || ''])
 
     if (result.rows.length === 0) {
       throw createError({

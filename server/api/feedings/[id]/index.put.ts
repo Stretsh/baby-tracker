@@ -1,4 +1,5 @@
 import { query } from '../../../utils/database'
+import { DateTime } from 'luxon'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -21,12 +22,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!food_type) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'food_type is required'
-      })
-    }
+
+    // Convert local time to UTC for storage
+    const utcTime = DateTime.fromISO(feeding_time).toUTC().toISO()
 
     // Update the feeding record
     const sql = `
@@ -36,7 +34,7 @@ export default defineEventHandler(async (event) => {
       RETURNING id, feeding_time, food_type, notes, created_at, updated_at
     `
 
-    const result = await query(sql, [feeding_time, food_type, notes || '', id])
+    const result = await query(sql, [utcTime, food_type || '', notes || '', id])
 
     if (result.rows.length === 0) {
       throw createError({

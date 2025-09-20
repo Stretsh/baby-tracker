@@ -90,9 +90,10 @@ const props = defineProps({
 const emit = defineEmits(['close', 'submit', 'delete'])
 
 const formatTime = (dateString) => {
-  const dt = DateTime.fromISO(dateString, { zone: 'utc' })
+  // Convert UTC from database to local time for display
+  const dt = DateTime.fromISO(dateString).toLocal()
   
-  // Format: dd.mm, HH:mm (24-hour format) - display as UTC to avoid timezone conversion
+  // Format: dd.mm, HH:mm (24-hour format)
   return dt.toFormat('d.M, HH:mm')
 }
 

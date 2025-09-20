@@ -1,6 +1,6 @@
 <template>
   <div>
-    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Food Type <span class="text-red-500">*</span></label>
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Food Type</label>
       <div class="relative">
         <input
           v-model="inputValue"
