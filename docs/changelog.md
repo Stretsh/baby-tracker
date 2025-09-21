@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Feeding details modal with edit/delete functionality - **COMPLETED**
 - ✅ View toggle between list and grid views - **COMPLETED**
 - ✅ Uniform time button sizing with monospace font - **COMPLETED**
+- ✅ Improved time display in details modal (time first, date second) - **COMPLETED**
+- ✅ Enhanced PWA update notifications for better user experience - **COMPLETED**
 - ✅ Documentation organization and structure - **COMPLETED**
 - ✅ Comprehensive .gitignore for Nuxt 4 projects - **COMPLETED**
 - ✅ MIT License - **COMPLETED**
@@ -32,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Delete functionality now properly updates global state - **COMPLETED**
 - ✅ Time buttons disappear immediately after deletion - **COMPLETED**
 - ✅ Proper Heroicons list-bullet icon for view toggle - **COMPLETED**
+- ✅ Floating buttons hidden when modals are open (z-index solution) - **COMPLETED**
+- ✅ Toast notifications always visible above modals (z-index 80) - **COMPLETED**
+- ✅ Toast notifications for edit/delete operations in details modal - **COMPLETED**
+- ✅ PWA update handling with user-friendly notifications - **COMPLETED**
 
 ## [0.1.0] - 2024-09-17
 

@@ -1,10 +1,10 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div v-if="isOpen" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
     <!-- Backdrop -->
     <div 
       class="absolute inset-0 bg-black bg-opacity-50"
       @click="closeModal"
-    ></div>
+    />
     
     <!-- Modal Content -->
     <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -31,7 +31,10 @@
             Time
           </label>
           <p class="text-lg text-gray-900 dark:text-white">
-            {{ formatDateTime(feeding?.feeding_time) }}
+            {{ formatTime(feeding?.feeding_time) }}
+          </p>
+          <p class="text-base text-gray-600 dark:text-gray-400 mt-1">
+            {{ formatDate(feeding?.feeding_time) }}
           </p>
         </div>
         
@@ -118,6 +121,7 @@ const emit = defineEmits(['close'])
 
 // Use global state instead of props
 const { feedings } = useFeedings()
+const { showSuccess, showError } = useToast()
 
 // Get the current feeding from global state
 const feeding = computed(() => {
@@ -165,15 +169,17 @@ const handleSubmit = async (formData) => {
   
   isUpdating.value = true
   try {
-    const updatedFeeding = await $fetch(`/api/feedings/${feeding.value.id}`, {
+    await $fetch(`/api/feedings/${feeding.value.id}`, {
       method: 'PUT',
       body: formData
     })
     // No need to emit - global state will be updated by the API response
+    showSuccess('Feeding updated successfully')
     closeEditModal()
     // Keep details modal open to show updated information
   } catch (error) {
     console.error('Update failed:', error)
+    showError('Failed to update feeding. Please try again.')
   } finally {
     isUpdating.value = false
   }
@@ -193,17 +199,25 @@ const handleDelete = async () => {
     const currentFeedings = feedings.value.filter(f => f.id !== feeding.value.id)
     setFeedings(currentFeedings)
     
+    showSuccess('Feeding deleted successfully')
     closeEditModal()
     closeModal() // Close the details modal too
   } catch (error) {
     console.error('Delete failed:', error)
+    showError('Failed to delete feeding. Please try again.')
   } finally {
     isDeleting.value = false
   }
 }
 
-// Format date and time for display
-const formatDateTime = (timeString) => {
-  return DateTime.fromISO(timeString).toLocal().toFormat('EEEE, MMMM d, yyyy \'at\' HH:mm')
+// Format time for display (HH:mm)
+const formatTime = (timeString) => {
+  return DateTime.fromISO(timeString).toLocal().toFormat('HH:mm')
 }
+
+// Format date for display (EEEE d MMMM yyyy)
+const formatDate = (timeString) => {
+  return DateTime.fromISO(timeString).toLocal().toFormat('EEEE d MMMM yyyy')
+}
+
 </script>

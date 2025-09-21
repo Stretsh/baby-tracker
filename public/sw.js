@@ -1,5 +1,5 @@
 // Baby Tracker PWA Service Worker
-const CACHE_NAME = 'baby-tracker-v1';
+const CACHE_NAME = 'baby-tracker-v2';
 const urlsToCache = [
   '/',
   '/manifest.json',

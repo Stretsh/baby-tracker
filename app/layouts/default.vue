@@ -44,7 +44,7 @@
     <BottomTabs :model-value="activeTab" @update:model-value="onTabChange" />
     
     <!-- Toast Container -->
-    <div class="fixed bottom-4 left-4 z-50 space-y-2">
+    <div class="fixed bottom-4 left-4 z-[80] space-y-2">
       <Toast
         v-for="toast in toasts"
         :key="toast.id"

@@ -1,10 +1,10 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" @click="emit('close', false)">
+  <div class="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-50" @click="handleClose">
     <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4 relative" @click.stop>
       <!-- Close button for edit form -->
       <button
         v-if="!isDelete"
-        @click="emit('close', false)"
+        @click="handleClose"
         class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,7 +43,7 @@
 
         <div class="flex gap-2 justify-end">
           <button
-            @click="emit('close', false)"
+            @click="handleClose"
             class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             Cancel
@@ -107,5 +107,10 @@ const handleSuccess = () => {
 
 const handleDelete = () => {
   emit('delete')
+}
+
+// Handle close events
+const handleClose = () => {
+  emit('close', false)
 }
 </script>
