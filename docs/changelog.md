@@ -8,16 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- PWA (Progressive Web App) functionality
-- App installation support for mobile and desktop
-- Service worker for offline caching
-- App manifest with proper icons
-- Install prompt and manual installation fallback
-- Documentation organization and structure
-- Comprehensive .gitignore for Nuxt 4 projects
-- MIT License
-- Contributing guidelines
-- Changelog tracking
+- ✅ PWA (Progressive Web App) functionality - **COMPLETED**
+- ✅ App installation support for mobile and desktop - **COMPLETED**
+- ✅ Service worker for offline caching - **COMPLETED**
+- ✅ App manifest with proper icons - **COMPLETED**
+- ✅ Install prompt and manual installation fallback - **COMPLETED**
+- ✅ Time button grid view for feeding history - **COMPLETED**
+- ✅ Daily grouped feeding display with clickable time buttons - **COMPLETED**
+- ✅ Feeding details modal with edit/delete functionality - **COMPLETED**
+- ✅ View toggle between list and grid views - **COMPLETED**
+- ✅ Uniform time button sizing with monospace font - **COMPLETED**
+- ✅ Documentation organization and structure - **COMPLETED**
+- ✅ Comprehensive .gitignore for Nuxt 4 projects - **COMPLETED**
+- ✅ MIT License - **COMPLETED**
+- ✅ Contributing guidelines - **COMPLETED**
+- ✅ Changelog tracking - **COMPLETED**
+
+### Changed
+- ✅ Default history view changed from list to time button grid - **COMPLETED**
+- ✅ History view now supports two display modes with toggle button - **COMPLETED**
+
+### Fixed
+- ✅ Delete functionality now properly updates global state - **COMPLETED**
+- ✅ Time buttons disappear immediately after deletion - **COMPLETED**
+- ✅ Proper Heroicons list-bullet icon for view toggle - **COMPLETED**
 
 ## [0.1.0] - 2024-09-17
 

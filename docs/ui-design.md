@@ -65,12 +65,14 @@
 
 **Purpose**: View and manage past feeding records
 
-**Layout**:
+**Two View Modes**:
+
+#### List View (Traditional)
 ```
 ┌─────────────────────────────────┐
 │ History                         │
 ├─────────────────────────────────┤
-│ [Sort: Newest First ▼] [Search] │ ← Controls
+│ [⏰] [Sort: Newest First ▼] [🔍] │ ← Controls (grid/list toggle, sort, search)
 ├─────────────────────────────────┤
 │                                 │
 │ Today, Jan 15                   │
@@ -92,11 +94,34 @@
 └─────────────────────────────────┘
 ```
 
+#### Time Button Grid View (Default)
+```
+┌─────────────────────────────────┐
+│ History                         │
+├─────────────────────────────────┤
+│ [📋] [🔍]                       │ ← Controls (list/grid toggle, search)
+├─────────────────────────────────┤
+│                                 │
+│ Today                            │
+│ [19:00] [15:45] [12:30] [09:15] │ ← Clickable time buttons
+│                                 │
+│ Yesterday                        │
+│ [18:30] [14:20] [11:45] [08:00] │
+│                                 │
+│ Jan 13, 2024                    │
+│ [17:15] [13:30] [10:20]         │
+│                                 │
+└─────────────────────────────────┘
+```
+
 **Components**:
-- `FeedingList`: Chronological list of feedings
-- `FeedingEntry`: Individual feeding record with actions
-- `SortControls`: Sort order and search functionality
-- `EditModal`: Modal for editing feeding details
+- `HistoryView`: Main container with view toggle
+- `TimeButtonView`: Grid of daily grouped time buttons
+- `FeedingList`: Traditional chronological list (list view)
+- `FeedingEntry`: Individual feeding record with actions (list view)
+- `FeedingDetailsModal`: Modal for viewing/editing feeding details
+- `SortControls`: Sort order and search functionality (list view only)
+- `ViewToggle`: Toggle between list and grid views
 
 ## Component Specifications
 

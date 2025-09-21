@@ -109,28 +109,14 @@ Install PM2 for process management:
 # Install PM2 globally
 npm install -g pm2
 
-# Create PM2 ecosystem file
-cat > ecosystem.config.js << EOF
-module.exports = {
-  apps: [{
-    name: 'baby-feeding',
-    script: '.output/server/index.mjs',
-    cwd: '/home/rehuel/projects/baby-feeding',
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G',
-    env: {
-      NODE_ENV: 'production',
-      NUXT_HOST: '0.0.0.0',
-      NUXT_PORT: 3300
-    }
-  }]
-}
-EOF
+# Copy the example ecosystem config
+cp ecosystem.config.example.cjs ecosystem.config.cjs
+
+# Edit the ecosystem config with your settings
+# Update database credentials and paths as needed
 
 # Start with PM2
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 # Save PM2 configuration
 pm2 save
@@ -138,6 +124,13 @@ pm2 save
 # Setup PM2 to start on boot
 pm2 startup
 ```
+
+**Ecosystem Configuration:**
+The `ecosystem.config.example.cjs` file provides a template with:
+- Health check configuration
+- Database environment variables
+- Production optimizations
+- Automatic restarts
 
 ## Network Configuration
 
@@ -150,6 +143,15 @@ pm2 startup
 1. **Find the server's IP address** (as shown above)
 2. **Open a web browser** on any device on the same network
 3. **Navigate to** `http://[server-ip]:3300`
+
+### PWA Installation
+
+The app supports Progressive Web App (PWA) installation:
+
+1. **Install Button**: Look for the blue download icon in the header
+2. **Browser Menu**: Use browser's "Install" or "Add to Home Screen" option
+3. **Mobile**: Install as a native app on your phone's home screen
+4. **Desktop**: Install as a standalone app on your computer
 
 ### Example URLs
 

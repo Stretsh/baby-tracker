@@ -19,6 +19,8 @@ Anyone is welcome to contribute, but remember: this is primarily an AI coding ex
 - **Quick Save**: One-click feeding record with current time
 - **Quick Food Buttons**: Save immediately with frequently used foods
 - **History Management**: View, edit, and delete feeding records
+- **Time Button Grid**: Daily grouped view with clickable time buttons
+- **Dual View Modes**: Toggle between list and grid views
 - **Search**: Find feedings by food type or notes
 - **Dark Mode**: Toggle between light and dark themes
 - **Mobile Responsive**: Works on phones, tablets, and desktops
