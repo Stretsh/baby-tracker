@@ -7,6 +7,25 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint'],
   css: ['~/assets/css/main.css'],
   
+  // PWA Configuration
+  app: {
+    head: {
+      link: [
+        { rel: 'manifest', href: '/manifest.json' },
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'apple-touch-icon', href: '/icon-192x192.png' }
+      ],
+      meta: [
+        { name: 'theme-color', content: '#1d4ed8' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+        { name: 'apple-mobile-web-app-title', content: 'Baby Tracker' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' }
+      ]
+    }
+  },
+  
   // Development server configuration
   devServer: {
     port: 3300,

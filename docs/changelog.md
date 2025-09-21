@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- PWA (Progressive Web App) functionality
+- App installation support for mobile and desktop
+- Service worker for offline caching
+- App manifest with proper icons
+- Install prompt and manual installation fallback
 - Documentation organization and structure
 - Comprehensive .gitignore for Nuxt 4 projects
 - MIT License
