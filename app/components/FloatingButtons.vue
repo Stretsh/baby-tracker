@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed bottom-24 right-6 z-50 flex flex-col items-center gap-5">
+  <div class="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-5">
     <!-- Foods Button -->
     <button
       class="w-12 h-12 bg-blue-700 hover:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200"
