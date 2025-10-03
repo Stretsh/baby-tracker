@@ -115,6 +115,7 @@
 ```
 
 **Components**:
+- `FloatingButtons`: Enhanced floating Quick Save button with timer functionality and color-coded urgency (new feature)
 - `HistoryView`: Main container with view toggle
 - `TimeButtonView`: Grid of daily grouped time buttons
 - `FeedingList`: Traditional chronological list (list view)
@@ -125,84 +126,41 @@
 
 ## Component Specifications
 
-### TimeInput Component
-```vue
-<template>
-  <div class="time-input">
-    <UInput 
-      v-model="selectedTime" 
-      type="datetime-local"
-      placeholder="Select time (leave empty for current time)"
-    />
-  </div>
-</template>
-```
+### Enhanced FloatingButtons Component
 
-### FoodAutocomplete Component
-```vue
-<template>
-  <USelectMenu
-    v-model="selectedFood"
-    :options="foodSuggestions"
-    searchable
-    creatable
-    placeholder="What did she eat?"
-  />
-</template>
-```
+**Purpose**: Display real-time information about the time elapsed since the last feeding directly on the floating Quick Save button
 
-### QuickFoodButtons Component
-```vue
-<template>
-  <div class="quick-foods">
-    <h3>Recent Foods</h3>
-    <div class="button-grid">
-      <UButton
-        v-for="food in recentFoods"
-        :key="food"
-        @click="saveWithFood(food)"
-        variant="outline"
-      >
-        {{ food }}
-      </UButton>
-    </div>
-  </div>
-</template>
-```
+**Features**:
+- Real-time updates every minute
+- Two-line layout: "FEED NOW" + time info
+- Color-coded urgency (green/orange/red)
+- Handles edge case when no feedings exist
+- Special "Just fed" state for anything under 1 minute
+- Hard color thresholds (no smooth transitions)
+- Dark mode support
+- Floating button positioned at bottom-right
+- Rounded rectangle button design (w-32 h-16) with two-line text
 
-### QuickSaveButton Component
-```vue
-<template>
-  <div class="quick-save-container">
-    <UButton
-      @click="quickSave"
-      color="primary"
-      size="xl"
-      block
-      class="quick-save-button"
-    >
-      QUICK SAVE
-    </UButton>
-  </div>
-</template>
-```
+**Technical Implementation**:
+- Uses `useFeedings()` composable to access feeding data
+- Calculates time difference using Luxon DateTime
+- Reactive timer that updates every 60 seconds
+- Computed property for efficient re-rendering
+- CSS transitions for smooth color morphing
+- Graceful handling of empty feeding array
+- Floating positioning with z-index management
 
-### BottomTabNavigation Component
-```vue
-<template>
-  <div class="bottom-tabs">
-    <UButton
-      v-for="tab in tabs"
-      :key="tab.id"
-      :icon="tab.icon"
-      :color="activeTab === tab.id ? 'primary' : 'gray'"
-      variant="ghost"
-      size="lg"
-      @click="setActiveTab(tab.id)"
-    />
-  </div>
-</template>
-```
+**Display Format**:
+- "FEED NOW" (no feedings, default green)
+- "FEED NOW" + "Just fed" (< 1 minute, green)
+- "FEED NOW" + "2h 25m since last" (recent, green, < 3h)
+- "FEED NOW" + "3h 45m since last" (moderate, orange, 3-4h)
+- "FEED NOW" + "5h 20m since last" (long, red, 4h+)
+
+**Placement**: Floating button at bottom-right of screen (bottom-24 right-6)
+
+
+
 
 ## Responsive Design
 

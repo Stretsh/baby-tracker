@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ MIT License - **COMPLETED**
 - ✅ Contributing guidelines - **COMPLETED**
 - ✅ Changelog tracking - **COMPLETED**
+- ✅ Enhanced Quick Save button with timer - **COMPLETED**
+  - Real-time display of time since last feeding on Quick Save button
+  - Two-line layout: "FEED NOW" + time info with "since last" phrasing
+  - Color-coded urgency (green < 3h, orange 3-4h, red 4h+) with hard thresholds
+  - Special "Just fed" state for anything under 1 minute
+  - Automatic updates every minute
+  - Rounded rectangle button design (w-32 h-16) with improved typography
+  - Graceful handling of empty feeding history and edge cases
 
 ### Changed
 - ✅ Default history view changed from list to time button grid - **COMPLETED**

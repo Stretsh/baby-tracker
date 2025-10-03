@@ -10,6 +10,8 @@ This directory contains comprehensive documentation for the Baby Tracker applica
 - [UI Design](./ui-design.md) - User interface specifications and components
 - [Changelog](./changelog.md) - Project version history
 - [Contributing](./contributing.md) - Contribution guidelines
+- [Features](./features/) - Detailed feature specifications
+  - [Last Feeding Timer](./features/last-feeding-timer.md) - Real-time feeding timer feature
 
 ## Getting Started
 
