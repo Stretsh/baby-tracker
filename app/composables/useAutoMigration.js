@@ -19,6 +19,8 @@ const MIGRATION_CACHE_KEY = 'baby-tracker-migration-status'
 const MIGRATION_CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
 export function useAutoMigration() {
+  // Use existing toast system
+  const { showSuccess, showError, showInfo } = useToast()
   
   /**
    * Check if migration has been completed recently (cached)
@@ -100,25 +102,31 @@ export function useAutoMigration() {
       
       const data = await response.json()
       
-      if (data.success) {
-        console.log('✅ Auto-migration: Completed successfully')
-        migrationStatus.value.isComplete = true
-        migrationStatus.value.progress = data.progress_percentage || 100
-        migrationStatus.value.message = `Migration complete: ${data.migrated_records}/${data.total_records} records migrated`
-        
-        // Cache the successful migration
-        cacheMigrationStatus('complete')
-        
-        return true
-      } else {
-        throw new Error(data.message || 'Migration failed')
-      }
+    if (data.success) {
+      console.log('✅ Auto-migration: Completed successfully')
+      migrationStatus.value.isComplete = true
+      migrationStatus.value.progress = data.progress_percentage || 100
+      migrationStatus.value.message = `Migration complete: ${data.migrated_records}/${data.total_records} records migrated`
+      
+      // Show success toast
+      showSuccess(`Database updated: ${data.migrated_records} records migrated`)
+      
+      // Cache the successful migration
+      cacheMigrationStatus('complete')
+      
+      return true
+    } else {
+      throw new Error(data.message || 'Migration failed')
+    }
       
     } catch (error) {
       console.error('❌ Auto-migration failed:', error)
       migrationStatus.value.hasError = true
       migrationStatus.value.error = error.message
       migrationStatus.value.message = `Migration failed: ${error.message}`
+      
+      // Show error toast
+      showError(`Migration failed: ${error.message}`)
       
       return false
     } finally {
