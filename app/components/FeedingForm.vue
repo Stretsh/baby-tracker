@@ -71,7 +71,7 @@ const props = defineProps({
 const emit = defineEmits(['submit', 'success'])
 
 const isLoading = ref(false)
-const { addFeeding, updateFeeding } = useFeedings()
+const { addFeeding, updateFeeding } = useOfflineFeedings()
 const { showSuccess, showError } = useToast()
 const notesTextarea = ref(null)
 
@@ -114,50 +114,35 @@ const handleSubmit = async () => {
   try {
     if (props.isEditing) {
       // Update existing feeding
-      const response = await $fetch(`/api/feedings/${props.feedingId}`, {
-        method: 'PUT',
-        body: {
-          feeding_time: formData.value.feeding_time + ':00',
-          food_type: formData.value.food_type,
-          notes: formData.value.notes
-        }
-      })
-      
-      if (response.success) {
-        updateFeeding(response.feeding)
-        showSuccess(response.message)
-        emit('submit', formData.value)
-        emit('success')
-      } else {
-        showError(response.message)
+      const feedingData = {
+        feeding_time: formData.value.feeding_time ? formData.value.feeding_time + ':00' : DateTime.now().toISO(),
+        food_type: formData.value.food_type,
+        notes: formData.value.notes
       }
+      
+      await updateFeeding(props.feedingId, feedingData)
+      showSuccess('Feeding updated successfully')
+      emit('submit', formData.value)
+      emit('success')
     } else {
       // Create new feeding
-      const response = await $fetch('/api/feedings', {
-        method: 'POST',
-        body: {
-          feeding_time: formData.value.feeding_time ? formData.value.feeding_time + ':00' : DateTime.now().toISO(),
-          food_type: formData.value.food_type,
-          notes: formData.value.notes
-        }
-      })
-      
-      if (response.success) {
-        addFeeding(response.feeding)
-        showSuccess(response.message)
-        
-        // Reset form
-        formData.value = {
-          feeding_time: '',
-          food_type: '',
-          notes: ''
-        }
-        
-        emit('success')
-      } else {
-        showError(response.message)
-        // Keep form data for retry
+      const feedingData = {
+        feeding_time: formData.value.feeding_time ? formData.value.feeding_time + ':00' : DateTime.now().toISO(),
+        food_type: formData.value.food_type,
+        notes: formData.value.notes
       }
+      
+      await addFeeding(feedingData)
+      showSuccess('Feeding saved successfully')
+      
+      // Reset form
+      formData.value = {
+        feeding_time: '',
+        food_type: '',
+        notes: ''
+      }
+      
+      emit('success')
     }
     
   } catch (error) {
