@@ -61,17 +61,36 @@ const { showSuccess, showError } = useToast()
 // Real-time timer for updates
 const currentTime = ref(DateTime.now())
 
-// Fetch recent food types (top 3 most used)
-const { data: recentFoodsData } = await useFetch('/api/food-types/recent', {
-  query: { limit: 3 },
-  default: () => ({ recent_foods: [] })
-})
+// Get recent food types from offline data
+const { getFeedingRecords } = useOfflineData()
+const top3Foods = ref([])
 
-// Sort bottom to top (most used at bottom)
-const top3Foods = computed(() => {
-  const foods = recentFoodsData.value?.recent_foods || []
-  return [...foods].reverse() // Reverse to show most used at bottom
-})
+// Load recent foods from offline data
+const loadRecentFoods = async () => {
+  try {
+    const records = await getFeedingRecords({ limit: 50 })
+    const foodCounts = {}
+    
+    // Count food types
+    records.forEach(record => {
+      if (record.food_type && record.food_type.trim()) {
+        foodCounts[record.food_type] = (foodCounts[record.food_type] || 0) + 1
+      }
+    })
+    
+    // Sort by count and get top 3, then reverse to show most used at bottom
+    const sortedFoods = Object.entries(foodCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3)
+      .map(([food]) => food)
+      .reverse() // Reverse to show most used at bottom
+    
+    top3Foods.value = sortedFoods
+  } catch (error) {
+    console.error('Failed to load recent foods:', error)
+    top3Foods.value = []
+  }
+}
 
 // Get the most recent feeding
 const lastFeeding = computed(() => {
@@ -158,6 +177,9 @@ let timerInterval = null
 
 // Close food buttons when clicking outside
 onMounted(() => {
+  // Load recent foods
+  loadRecentFoods()
+  
   const handleClickOutside = (event) => {
     if (!event.target.closest('.fixed.bottom-24.right-6')) {
       showFoodButtons.value = false
