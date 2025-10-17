@@ -86,6 +86,19 @@ onMounted(async () => {
       .catch((error) => {
         console.error('Service Worker registration failed:', error);
       });
+    
+    // Listen for messages from service worker
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      console.log('App received message from Service Worker:', event.data);
+      
+      if (event.data.type === 'sync-complete') {
+        console.log('Sync completed:', event.data.data);
+        // Trigger UI refresh by dispatching a custom event
+        window.dispatchEvent(new CustomEvent('sync-complete', {
+          detail: event.data.data
+        }));
+      }
+    });
   }
 })
 
