@@ -115,7 +115,9 @@ const handleSubmit = async () => {
     if (props.isEditing) {
       // Update existing feeding
       const feedingData = {
-        feeding_time: formData.value.feeding_time ? formData.value.feeding_time + ':00' : DateTime.now().toISO(),
+        feeding_time: formData.value.feeding_time 
+          ? DateTime.fromISO(formData.value.feeding_time).toUTC().toISO()
+          : DateTime.now().toISO(),
         food_type: formData.value.food_type,
         notes: formData.value.notes
       }
@@ -127,7 +129,9 @@ const handleSubmit = async () => {
     } else {
       // Create new feeding
       const feedingData = {
-        feeding_time: formData.value.feeding_time ? formData.value.feeding_time + ':00' : DateTime.now().toISO(),
+        feeding_time: formData.value.feeding_time 
+          ? DateTime.fromISO(formData.value.feeding_time).toUTC().toISO()
+          : DateTime.now().toISO(),
         food_type: formData.value.food_type,
         notes: formData.value.notes
       }

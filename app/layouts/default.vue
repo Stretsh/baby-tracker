@@ -11,8 +11,8 @@
           <button
             v-if="isInstallable && !isInstalled"
             class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-md transition-colors"
-            @click="installApp"
             title="Install App"
+            @click="installApp"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -61,8 +61,7 @@ const isDark = ref(false)
 const { toasts, removeToast } = useToast()
 const { isInstallable, isInstalled, installApp } = usePWA()
 
-// Auto-migration functionality
-const { initializeAutoMigration } = useAutoMigration()
+// Sync will be handled by Service Worker
 
 // Initialize dark mode from localStorage or system preference
 onMounted(async () => {
@@ -77,12 +76,7 @@ onMounted(async () => {
     document.documentElement.classList.remove('dark')
   }
   
-  // Run auto-migration silently in the background
-  try {
-    await initializeAutoMigration()
-  } catch (error) {
-    console.warn('Auto-migration failed, but app can continue:', error)
-  }
+  // Service Worker will handle sync initialization
 })
 
 // Toggle dark mode

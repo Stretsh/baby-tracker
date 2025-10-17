@@ -91,7 +91,7 @@
     
     <!-- Edit/Delete Modal (using existing FeedingModal) -->
     <FeedingModal
-      v-if="showEditModal || showDeleteModal"
+      v-if="(showEditModal || showDeleteModal) && preparedFeedingData"
       :feeding-data="preparedFeedingData"
       :is-delete="showDeleteModal"
       :is-updating="isUpdating"
@@ -170,7 +170,9 @@ const handleSubmit = async (formData) => {
   isUpdating.value = true
   try {
     const feedingData = {
-      feeding_time: formData.feeding_time ? formData.feeding_time + ':00' : new Date().toISOString(),
+      feeding_time: formData.feeding_time 
+        ? DateTime.fromISO(formData.feeding_time).toUTC().toISO()
+        : new Date().toISOString(),
       food_type: formData.food_type,
       notes: formData.notes
     }
