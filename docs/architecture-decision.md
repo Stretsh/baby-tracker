@@ -267,14 +267,15 @@ App Components → Dexie (always, regardless of online status)
 - [x] Create ONE sync endpoint: `server/api/sync.post.ts`
 - [x] ~~Add `client_id` column to PostgreSQL with indexes~~ Already done.
 
-### Phase 2: Implement Service Worker with Dexie
-- Load Dexie in SW using importScripts (verified: Dexie works in SW)
-- Create Dexie instance in SW with same schema as app
-- Implement sync_queue monitoring
-- Add Background Sync API integration
-- Implement periodic sync checks
-- Handle online/offline transitions
-- POST pending operations to `/api/sync` endpoint
+### Phase 2: Implement Service Worker with Dexie — COMPLETED
+- [x] Load Dexie in SW using importScripts (verified: Dexie works in SW)
+- [x] Create Dexie instance in SW with same schema as app
+- [x] Implement online-only Dexie loading (only loads when online for sync)
+- [x] Implement sync_queue monitoring (only when online and Dexie available)
+- [x] Add Background Sync API integration
+- [x] Implement periodic sync checks
+- [x] Handle online/offline transitions
+- [ ] POST pending operations to `/api/sync` endpoint
 
 ### Phase 3: Remove Sync Logic from App — COMPLETED
 - [x] Remove/deprecate sync composables (`useSync`, `useAutoMigration`)

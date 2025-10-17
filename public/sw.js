@@ -26,11 +26,12 @@ const initDatabase = () => {
   
   db = new Dexie('BabyTrackerDB');
   
-  // Same schema as app
+  // Same schema as app + sync metadata
   db.version(1).stores({
     feeding_records: '++id, client_id, feeding_time, food_type, notes, updated_at',
     conflicts: '++id, client_id, local_data, server_data, timestamp, resolved',
-    sync_queue: '++id, client_id, operation, payload, created_at, retry_count'
+    sync_queue: '++id, client_id, operation, payload, created_at, retry_count',
+    sync_metadata: 'key, value'  // For storing last sync timestamp
   });
   
   return db;
@@ -96,6 +97,8 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => {
       console.log('Service Worker activated');
+      // Trigger initial sync when service worker activates
+      performFullSync();
       return self.clients.claim();
     })
   );
@@ -131,7 +134,35 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Sync queue monitoring (only when online and Dexie is loaded)
+// Full sync (both PUSH and PULL phases)
+const performFullSync = async () => {
+  if (!navigator.onLine) {
+    console.log('Service Worker: Offline - skipping full sync');
+    return;
+  }
+  
+  // Check if Dexie is available (loaded at top level when online)
+  if (typeof Dexie === 'undefined') {
+    console.log('Service Worker: Dexie not available, skipping sync');
+    return;
+  }
+  
+  try {
+    const database = await initDatabase();
+    
+    // Get pending operations for PUSH phase
+    const pendingOps = await database.sync_queue.toArray();
+    console.log(`Service Worker: Full sync - ${pendingOps.length} pending operations`);
+    
+    // Perform sync (handles both PUSH and PULL)
+    await performSync(database, pendingOps);
+    
+  } catch (error) {
+    console.error('Service Worker: Error during full sync:', error);
+  }
+};
+
+// Sync queue monitoring and processing (only when online and Dexie is loaded)
 const checkSyncQueue = async () => {
   if (!navigator.onLine) {
     console.log('Service Worker: Offline - skipping sync check');
@@ -145,24 +176,221 @@ const checkSyncQueue = async () => {
   }
   
   try {
-    const database = initDatabase();
+    const database = await initDatabase();
     const pendingCount = await database.sync_queue.count();
     
     if (pendingCount > 0) {
       console.log(`Service Worker: Found ${pendingCount} pending sync operations`);
       
-      // TODO: Implement actual sync logic in next step
-      // For now, just log the pending operations
+      // Get pending operations
       const pendingOps = await database.sync_queue.toArray();
       console.log('Pending operations:', pendingOps);
+      
+      // Perform sync
+      await performSync(database, pendingOps);
     }
   } catch (error) {
     console.error('Service Worker: Error checking sync queue:', error);
   }
 };
 
+// Perform actual sync with server
+const performSync = async (database, pendingOps) => {
+  try {
+    // Get last sync timestamp
+    const lastSync = await getLastSyncTimestamp(database);
+    
+    // Prepare sync request
+    const syncRequest = {
+      lastSync,
+      pendingOperations: pendingOps.map(op => ({
+        operation: op.operation,
+        client_id: op.client_id,
+        payload: op.payload
+      }))
+    };
+    
+    console.log('Service Worker: Sending sync request:', syncRequest);
+    
+    // POST to sync endpoint
+    const response = await fetch('/api/sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(syncRequest)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Sync failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const syncResult = await response.json();
+    console.log('Service Worker: Sync response:', syncResult);
+    
+    // Process server records (PULL phase)
+    if (syncResult.serverRecords && syncResult.serverRecords.length > 0) {
+      await processServerRecords(database, syncResult.serverRecords);
+    }
+    
+    // Process conflicts
+    if (syncResult.conflicts && syncResult.conflicts.length > 0) {
+      await processConflicts(database, syncResult.conflicts);
+    }
+    
+    // Remove successfully synced operations from queue
+    const syncedClientIds = pendingOps.map(op => op.client_id);
+    await database.sync_queue.where('client_id').anyOf(syncedClientIds).delete();
+    
+    // Update last sync timestamp
+    await updateLastSyncTimestamp(database, new Date().toISOString());
+    
+    console.log('Service Worker: Sync completed successfully');
+    
+    // Notify app about sync completion
+    await notifyApp('sync-complete', {
+      serverRecords: syncResult.serverRecords?.length || 0,
+      conflicts: syncResult.conflicts?.length || 0
+    });
+    
+  } catch (error) {
+    console.error('Service Worker: Sync failed:', error);
+    // TODO: Implement retry logic with exponential backoff
+  }
+};
+
+// Get last sync timestamp from database
+const getLastSyncTimestamp = async (database) => {
+  try {
+    const result = await database.sync_metadata.get('lastSync');
+    return result ? result.value : null;
+  } catch (error) {
+    console.log('Service Worker: No last sync timestamp found');
+    return null;
+  }
+};
+
+// Update last sync timestamp
+const updateLastSyncTimestamp = async (database, timestamp) => {
+  try {
+    await database.sync_metadata.put({
+      key: 'lastSync',
+      value: timestamp
+    });
+  } catch (error) {
+    console.error('Service Worker: Failed to update last sync timestamp:', error);
+  }
+};
+
+// Process server records (PULL phase)
+const processServerRecords = async (database, serverRecords) => {
+  for (const record of serverRecords) {
+    try {
+      // Check if record exists locally
+      const existing = await database.feeding_records.where('client_id').equals(record.client_id).first();
+      
+      if (existing) {
+        // Update existing record
+        await database.feeding_records.update(record.client_id, {
+          feeding_time: record.feeding_time,
+          food_type: record.food_type,
+          notes: record.notes,
+          updated_at: record.updated_at
+        });
+        console.log(`Service Worker: Updated record ${record.client_id}`);
+      } else {
+        // Insert new record
+        await database.feeding_records.add({
+          client_id: record.client_id,
+          feeding_time: record.feeding_time,
+          food_type: record.food_type,
+          notes: record.notes,
+          updated_at: record.updated_at
+        });
+        console.log(`Service Worker: Added new record ${record.client_id}`);
+      }
+    } catch (error) {
+      console.error(`Service Worker: Failed to process server record ${record.client_id}:`, error);
+    }
+  }
+};
+
+// Process conflicts
+const processConflicts = async (database, conflicts) => {
+  for (const conflict of conflicts) {
+    try {
+      await database.conflicts.add({
+        client_id: conflict.client_id,
+        local_data: conflict.local_data,
+        server_data: conflict.server_data,
+        timestamp: new Date().toISOString(),
+        resolved: false
+      });
+      console.log(`Service Worker: Added conflict for ${conflict.client_id}`);
+    } catch (error) {
+      console.error(`Service Worker: Failed to add conflict ${conflict.client_id}:`, error);
+    }
+  }
+};
+
 // Start monitoring sync queue every 5 seconds
 setInterval(checkSyncQueue, 5000);
+
+// Background Sync API for reliable sync when app comes back online
+self.addEventListener('sync', (event) => {
+  console.log('Service Worker: Background sync triggered');
+  
+  if (event.tag === 'baby-tracker-sync') {
+    event.waitUntil(
+      checkSyncQueue().catch(error => {
+        console.error('Service Worker: Background sync failed:', error);
+      })
+    );
+  }
+});
+
+// Register background sync when online
+const registerBackgroundSync = async () => {
+  if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.sync.register('baby-tracker-sync');
+      console.log('Service Worker: Background sync registered');
+    } catch (error) {
+      console.error('Service Worker: Failed to register background sync:', error);
+    }
+  }
+};
+
+// Handle online/offline events
+self.addEventListener('online', () => {
+  console.log('Service Worker: Connection restored - triggering sync');
+  // Trigger sync when back online
+  setTimeout(() => {
+    checkSyncQueue();
+  }, 1000); // Small delay to ensure connection is stable
+});
+
+self.addEventListener('offline', () => {
+  console.log('Service Worker: Connection lost - sync paused');
+});
+
+// Notify app about sync events
+const notifyApp = async (type, data) => {
+  try {
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: type,
+        data: data,
+        timestamp: new Date().toISOString()
+      });
+    });
+    console.log(`Service Worker: Notified ${clients.length} clients about ${type}`);
+  } catch (error) {
+    console.error('Service Worker: Failed to notify app:', error);
+  }
+};
 
 // Message handling for app communication
 self.addEventListener('message', (event) => {
