@@ -18,7 +18,7 @@
 
       <!-- Edit Form -->
       <FeedingForm
-        v-if="!isDelete"
+        v-if="!isDelete && feedingData"
         :initial-data="feedingData"
         :is-editing="true"
         :is-modal="true"
@@ -28,16 +28,17 @@
       />
 
       <!-- Delete Confirmation -->
-      <div v-else class="space-y-4">
+      <div v-else-if="isDelete && feedingData" class="space-y-4">
         <p class="text-gray-600 dark:text-gray-400">
           Are you sure you want to delete this feeding record? This action cannot be undone.
         </p>
         
         <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
           <div class="text-sm text-gray-600 dark:text-gray-400">
-            <div><strong>Time:</strong> {{ formatTime(feedingData.feeding_time) }}</div>
-            <div><strong>Food:</strong> {{ feedingData.food_type || 'No food specified' }}</div>
-            <div v-if="feedingData.notes"><strong>Notes:</strong> {{ feedingData.notes }}</div>
+            <div v-if="feedingData"><strong>Time:</strong> {{ formatTime(feedingData.feeding_time) }}</div>
+            <div v-if="feedingData"><strong>Food:</strong> {{ feedingData.food_type || 'No food specified' }}</div>
+            <div v-if="feedingData && feedingData.notes"><strong>Notes:</strong> {{ feedingData.notes }}</div>
+            <div v-else class="text-gray-500 italic">Feeding data not available</div>
           </div>
         </div>
 
@@ -61,6 +62,21 @@
           </button>
         </div>
       </div>
+      
+      <!-- Fallback when feedingData is null -->
+      <div v-else class="space-y-4">
+        <p class="text-gray-600 dark:text-gray-400">
+          Feeding data is not available.
+        </p>
+        <div class="flex gap-2 justify-end">
+          <button
+            @click="handleClose"
+            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -71,7 +87,8 @@ import { DateTime } from 'luxon'
 const props = defineProps({
   feedingData: {
     type: Object,
-    required: true
+    required: false,
+    default: null
   },
   isDelete: {
     type: Boolean,
@@ -90,6 +107,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'submit', 'delete'])
 
 const formatTime = (dateString) => {
+  if (!dateString) return 'Unknown time'
+  
   // Convert UTC from database to local time for display
   const dt = DateTime.fromISO(dateString).toLocal()
   

@@ -204,11 +204,16 @@ export const useOfflineData = () => {
   
   const getDatabaseStats = async () => {
     try {
-      const [feedingCount, conflictCount, queueCount] = await Promise.all([
+      // Get all conflicts and filter by resolved status
+      const allConflicts = await database.conflicts.toArray()
+      const unresolvedConflicts = allConflicts.filter(conflict => !conflict.resolved)
+      
+      const [feedingCount, queueCount] = await Promise.all([
         database.feeding_records.count(),
-        database.conflicts.where('resolved').equals(false).count(),
         database.sync_queue.count()
       ])
+      
+      const conflictCount = unresolvedConflicts.length
       
       return {
         feedingRecords: feedingCount,

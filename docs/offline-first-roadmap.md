@@ -55,7 +55,7 @@ Transform the current PWA into a robust offline-first application with local-fir
 **Note**: During development, use production builds instead of dev server to properly test offline capabilities and service worker functionality. 
 
 **Development Workflow:**
-1. Kill running server: `pkill -f "node.*server/index.mjs"`
+1. Kill running server: `pkill -f "node server/index.mjs"`
 2. Build: `npm run build`
 3. Preview: `npm run preview`
 
@@ -106,7 +106,7 @@ Transform the current PWA into a robust offline-first application with local-fir
 ### 2.4 Automatic Migration System ✅
 - [x] Create auto-migration endpoint (`/api/feedings/auto-migrate`)
 - [x] Add migration status endpoint (`/api/feedings/migration-status`)
-- [x] Implement client-side auto-migration composable (`useAutoMigration`)
+- [x] ~~Implement client-side auto-migration composable (`useAutoMigration`)~~ (Removed - not needed with offline-first architecture)
 - [x] Add startup migration detection and execution
 - [x] Integrate with existing toast system for user feedback
 - [x] Add migration caching to avoid repeated checks
