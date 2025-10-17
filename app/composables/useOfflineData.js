@@ -10,11 +10,11 @@ const initDatabase = () => {
   
   db = new Dexie('BabyTrackerDB')
   
-  // Schema version 1: Simple sync with client_id
   db.version(1).stores({
     feeding_records: '++id, client_id, feeding_time, food_type, notes, updated_at',
     conflicts: '++id, client_id, local_data, server_data, timestamp, resolved',
-    sync_queue: '++id, client_id, operation, payload, created_at, retry_count'
+    sync_queue: '++id, client_id, operation, payload, created_at, retry_count',
+    sync_metadata: 'key, value'  // For storing last sync timestamp
   })
   
   return db

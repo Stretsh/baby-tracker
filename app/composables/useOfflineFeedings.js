@@ -158,6 +158,27 @@ export const useOfflineFeedings = () => {
     return await quickSave(foodType, notes)
   }
   
+  // Listen for sync completion events from service worker
+  const handleSyncComplete = async (event) => {
+    console.log('Sync complete event received:', event.detail);
+    // Refresh feedings data when sync completes
+    try {
+      await loadFeedings();
+      console.log('Feedings refreshed after sync');
+    } catch (error) {
+      console.error('Failed to refresh feedings after sync:', error);
+    }
+  };
+  
+  onMounted(() => {
+    window.addEventListener('sync-complete', handleSyncComplete);
+  });
+  
+  // Cleanup listener on unmount
+  onUnmounted(() => {
+    window.removeEventListener('sync-complete', handleSyncComplete);
+  });
+  
   return {
     // Core state
     feedings,
