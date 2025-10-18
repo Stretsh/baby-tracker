@@ -65,10 +65,11 @@ const { isInstallable, isInstalled, installApp } = usePWA()
 
 // Sync status (client-side only)
 const isOnline = ref(true) // Default to online, will be updated on client
+const serverReachable = ref(true) // Default to reachable, will be updated by service worker
 const syncStatusClass = computed(() => {
-  return isOnline.value 
-    ? 'bg-green-500' // Online and synced
-    : 'bg-red-500'   // Offline
+  return (isOnline.value && serverReachable.value)
+    ? 'bg-green-500' // Online and server reachable
+    : 'bg-red-500'   // Offline OR server unreachable
 })
 
 // Sync will be handled by Service Worker
@@ -111,15 +112,26 @@ const syncStatusClass = computed(() => {
           detail: event.data.data
         }));
       }
+      
+      if (event.data.type === 'server-status') {
+        console.log('Server status update:', event.data.data);
+        serverReachable.value = event.data.data.reachable;
+        isOnline.value = event.data.data.online;
+      }
     });
     
     // Listen for online/offline events
     window.addEventListener('online', () => {
       isOnline.value = true;
+      // Trigger server reachability check when coming back online
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CHECK_SERVER' });
+      }
     });
     
     window.addEventListener('offline', () => {
       isOnline.value = false;
+      serverReachable.value = false;
     });
   }
 })
