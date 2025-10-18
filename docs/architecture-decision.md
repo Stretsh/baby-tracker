@@ -275,7 +275,11 @@ App Components → Dexie (always, regardless of online status)
 - [x] Add Background Sync API integration
 - [x] Implement periodic sync checks
 - [x] Handle online/offline transitions
-- [ ] POST pending operations to `/api/sync` endpoint
+- [x] POST pending operations to `/api/sync` endpoint
+- [x] Implement full two-way sync (PUSH + PULL phases)
+- [x] Add app load sync trigger (immediate sync on page load)
+- [x] Add online event sync trigger (sync when connection restored)
+- [x] Add app messaging for sync status updates
 
 ### Phase 3: Remove Sync Logic from App — COMPLETED
 - [x] Remove/deprecate sync composables (`useSync`, `useAutoMigration`)
@@ -283,11 +287,11 @@ App Components → Dexie (always, regardless of online status)
 - [x] No network calls from app code
 - [x] Service Worker will handle all synchronization
 
-### Phase 4: Service Worker Communication
-- SW messages app about sync status
-- App listens for sync events from SW
-- Update sync status indicator from SW messages
-- Handle conflict notifications from SW
+### Phase 4: Service Worker Communication — COMPLETED
+- [x] SW messages app about sync status
+- [x] App listens for sync events from SW
+- [x] Update sync status indicator from SW messages
+- [x] Handle conflict notifications from SW
 
 ### Phase 5: Conflict Resolution UI
 - Create `app/components/ConflictModal.vue`
@@ -295,12 +299,12 @@ App Components → Dexie (always, regardless of online status)
 - Triggered by SW conflict notifications
 - Resolution writes to Dexie, SW picks up and syncs
 
-### Phase 6: Sync Status UI (Simplified)
-- Create minimal `app/components/SyncStatus.vue`
-- Displays status based on SW messages
-- 2px status bar under header for status
-- Red conflicts button with badge (opens conflict modal)
-- No manual sync; page refresh already triggers sync
+### Phase 6: Sync Status UI (Simplified) — COMPLETED
+- [x] Create minimal sync status indicator
+- [x] Displays status based on online/offline events
+- [x] 2px status bar integrated into header
+- [x] Green for online, red for offline
+- [x] No manual sync; page refresh already triggers sync
 
 ### Phase 7: Configure PWA
 - Set `ssr: false` in `nuxt.config.ts`

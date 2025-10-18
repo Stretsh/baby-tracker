@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
-    <header class="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+    <header class="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm">
       <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
         <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
           Baby Tracker
@@ -33,6 +33,8 @@
           </button>
         </div>
       </div>
+      <!-- Sync Status Bar -->
+      <div class="h-0.5 w-full" :class="syncStatusClass"></div>
     </header>
 
     <!-- Main Content -->
@@ -61,20 +63,31 @@ const isDark = ref(false)
 const { toasts, removeToast } = useToast()
 const { isInstallable, isInstalled, installApp } = usePWA()
 
+// Sync status (client-side only)
+const isOnline = ref(true) // Default to online, will be updated on client
+const syncStatusClass = computed(() => {
+  return isOnline.value 
+    ? 'bg-green-500' // Online and synced
+    : 'bg-red-500'   // Offline
+})
+
 // Sync will be handled by Service Worker
 
-// Initialize dark mode from localStorage or system preference
-onMounted(async () => {
-  const savedTheme = localStorage.getItem('theme')
-  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-  
-  if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
-    isDark.value = true
-    document.documentElement.classList.add('dark')
-  } else {
-    isDark.value = false
-    document.documentElement.classList.remove('dark')
-  }
+  // Initialize dark mode from localStorage or system preference
+  onMounted(async () => {
+    // Initialize online status
+    isOnline.value = navigator.onLine
+    
+    const savedTheme = localStorage.getItem('theme')
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      isDark.value = true
+      document.documentElement.classList.add('dark')
+    } else {
+      isDark.value = false
+      document.documentElement.classList.remove('dark')
+    }
   
   // Service Worker will handle sync initialization
   // Register service worker
@@ -98,6 +111,15 @@ onMounted(async () => {
           detail: event.data.data
         }));
       }
+    });
+    
+    // Listen for online/offline events
+    window.addEventListener('online', () => {
+      isOnline.value = true;
+    });
+    
+    window.addEventListener('offline', () => {
+      isOnline.value = false;
     });
   }
 })
