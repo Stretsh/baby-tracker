@@ -134,10 +134,38 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Check server reachability
+const checkServerReachability = async () => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const response = await fetch('/api/health', {
+      method: 'GET',
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch (error) {
+    console.log('Service Worker: Server unreachable:', error.message);
+    return false;
+  }
+};
+
 // Full sync (both PUSH and PULL phases)
 const performFullSync = async () => {
   if (!navigator.onLine) {
     console.log('Service Worker: Offline - skipping full sync');
+    await notifyApp('server-status', { reachable: false, online: false });
+    return;
+  }
+  
+  // Check server reachability
+  const serverReachable = await checkServerReachability();
+  if (!serverReachable) {
+    console.log('Service Worker: Server unreachable - skipping sync');
+    await notifyApp('server-status', { reachable: false, online: true });
     return;
   }
   
@@ -157,8 +185,12 @@ const performFullSync = async () => {
     // Perform sync (handles both PUSH and PULL)
     await performSync(database, pendingOps);
     
+    // Notify app that server is reachable and synced
+    await notifyApp('server-status', { reachable: true, online: true });
+    
   } catch (error) {
     console.error('Service Worker: Error during full sync:', error);
+    await notifyApp('server-status', { reachable: false, online: true });
   }
 };
 
@@ -166,6 +198,15 @@ const performFullSync = async () => {
 const checkSyncQueue = async () => {
   if (!navigator.onLine) {
     console.log('Service Worker: Offline - skipping sync check');
+    await notifyApp('server-status', { reachable: false, online: false });
+    return;
+  }
+  
+  // Check server reachability
+  const serverReachable = await checkServerReachability();
+  if (!serverReachable) {
+    console.log('Service Worker: Server unreachable - skipping sync check');
+    await notifyApp('server-status', { reachable: false, online: true });
     return;
   }
   
@@ -189,8 +230,13 @@ const checkSyncQueue = async () => {
       // Perform sync
       await performSync(database, pendingOps);
     }
+    
+    // Notify app that server is reachable
+    await notifyApp('server-status', { reachable: true, online: true });
+    
   } catch (error) {
     console.error('Service Worker: Error checking sync queue:', error);
+    await notifyApp('server-status', { reachable: false, online: true });
   }
 };
 
@@ -333,8 +379,8 @@ const processConflicts = async (database, conflicts) => {
   }
 };
 
-// Start monitoring sync queue every 5 seconds
-setInterval(checkSyncQueue, 5000);
+// Start monitoring sync queue every 60 seconds (conservative for baby tracker)
+setInterval(checkSyncQueue, 60000);
 
 // Background Sync API for reliable sync when app comes back online
 self.addEventListener('sync', (event) => {
@@ -402,6 +448,10 @@ self.addEventListener('message', (event) => {
   
   if (event.data && event.data.type === 'CHECK_SYNC') {
     checkSyncQueue();
+  }
+  
+  if (event.data && event.data.type === 'CHECK_SERVER') {
+    performFullSync();
   }
 });
 
