@@ -63,32 +63,16 @@ const showSuggestions = ref(false)
 const allFoodOptions = ref([])
 const selectedIndex = ref(-1)
 
-// Get food types from offline data
-const { getFeedingRecords } = useOfflineData()
+// Fetch food types from API
+const { data: foodTypes } = await useFetch('/api/food-types', {
+  default: () => ({ food_types: [] })
+})
 
-// Load food options from offline data
-const loadFoodOptions = async () => {
-  try {
-    const records = await getFeedingRecords({ limit: 200 })
-    const uniqueFoods = new Set()
-    
-    // Extract unique food types
-    records.forEach(record => {
-      if (record.food_type && record.food_type.trim()) {
-        uniqueFoods.add(record.food_type.trim())
-      }
-    })
-    
-    allFoodOptions.value = Array.from(uniqueFoods).sort()
-  } catch (error) {
-    console.error('Failed to load food options:', error)
-    allFoodOptions.value = []
+// Initialize food options
+watchEffect(() => {
+  if (foodTypes.value?.food_types) {
+    allFoodOptions.value = foodTypes.value.food_types
   }
-}
-
-// Load food options on mount
-onMounted(() => {
-  loadFoodOptions()
 })
 
 const filteredOptions = computed(() => {
