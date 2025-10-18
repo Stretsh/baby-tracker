@@ -55,7 +55,7 @@ import { DateTime } from 'luxon'
 
 const isLoading = ref(false)
 const showFoodButtons = ref(false)
-const { addFeeding, feedings } = useFeedings()
+const { feedings, quickSave: offlineQuickSave, saveWithFood: offlineSaveWithFood } = useOfflineFeedings()
 const { showSuccess, showError } = useToast()
 
 // Real-time timer for updates
@@ -128,23 +128,9 @@ const saveWithFood = async (food) => {
   isLoading.value = true
   
   try {
-    const response = await $fetch('/api/feedings', {
-      method: 'POST',
-      body: {
-        feeding_time: DateTime.now().toISO(),
-        food_type: food,
-        notes: ''
-      }
-    })
-    
-    if (response.success) {
-      addFeeding(response.feeding)
-      showSuccess(response.message)
-      showFoodButtons.value = false
-    } else {
-      showError(response.message)
-    }
-    
+    await offlineSaveWithFood(food, '')
+    showSuccess('Feeding saved successfully')
+    showFoodButtons.value = false
   } catch (error) {
     console.error('Quick food save failed:', error)
     showError('Save failed. Please try again.')
@@ -157,22 +143,8 @@ const quickSave = async () => {
   isLoading.value = true
   
   try {
-    const response = await $fetch('/api/feedings', {
-      method: 'POST',
-      body: {
-        feeding_time: DateTime.now().toISO(),
-        food_type: '',
-        notes: ''
-      }
-    })
-    
-    if (response.success) {
-      addFeeding(response.feeding)
-      showSuccess(response.message)
-    } else {
-      showError(response.message)
-    }
-    
+    await offlineQuickSave('', '')
+    showSuccess('Feeding saved successfully')
   } catch (error) {
     console.error('Quick save failed:', error)
     showError('Save failed. Please try again.')

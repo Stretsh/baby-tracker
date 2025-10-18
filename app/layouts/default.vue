@@ -43,6 +43,13 @@
     <!-- Bottom Navigation -->
     <BottomTabs :model-value="activeTab" @update:model-value="onTabChange" />
     
+    <!-- Migration Status (hidden by default, only shows during migration) -->
+    <MigrationStatus 
+      :status="migrationStatus" 
+      :auto-hide="true"
+      :hide-delay="2000"
+    />
+    
     <!-- Toast Container -->
     <div class="fixed bottom-4 left-4 z-[80] space-y-2">
       <Toast
@@ -61,8 +68,12 @@ const isDark = ref(false)
 const { toasts, removeToast } = useToast()
 const { isInstallable, isInstalled, installApp } = usePWA()
 
+// Auto-migration functionality
+const { initializeAutoMigration, getMigrationStatus } = useAutoMigration()
+const migrationStatus = computed(() => getMigrationStatus())
+
 // Initialize dark mode from localStorage or system preference
-onMounted(() => {
+onMounted(async () => {
   const savedTheme = localStorage.getItem('theme')
   const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
   
@@ -72,6 +83,13 @@ onMounted(() => {
   } else {
     isDark.value = false
     document.documentElement.classList.remove('dark')
+  }
+  
+  // Run auto-migration silently in the background
+  try {
+    await initializeAutoMigration()
+  } catch (error) {
+    console.warn('Auto-migration failed, but app can continue:', error)
   }
 })
 

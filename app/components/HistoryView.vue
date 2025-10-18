@@ -92,7 +92,7 @@
 <script setup>
 const sortOrder = ref('desc')
 const searchQuery = ref('')
-const { feedings, setFeedings } = useFeedings()
+const { feedings, setFeedings, loadFeedings: offlineLoadFeedings } = useOfflineFeedings()
 const pending = ref(false)
 
 // View mode state
@@ -106,8 +106,7 @@ const selectedFeeding = ref(null)
 const loadFeedings = async () => {
   pending.value = true
   try {
-    const response = await $fetch('/api/feedings')
-    setFeedings(response.feedings || [])
+    await offlineLoadFeedings()
   } catch (error) {
     console.error('Failed to load feedings:', error)
   } finally {

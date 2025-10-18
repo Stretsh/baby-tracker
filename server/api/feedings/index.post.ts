@@ -1,5 +1,6 @@
 import { query } from '../../utils/database'
 import { DateTime } from 'luxon'
+import { v4 as uuidv4 } from 'uuid'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -17,14 +18,17 @@ export default defineEventHandler(async (event) => {
     // Convert local time to UTC for storage
     const utcTime = DateTime.fromISO(feeding_time).toUTC().toISO()
 
+    // Generate client_id for offline-first sync
+    const clientId = uuidv4()
+
     // Insert the new feeding record
     const sql = `
-      INSERT INTO feeding_records (feeding_time, food_type, notes)
-      VALUES ($1, $2, $3)
-      RETURNING id, feeding_time, food_type, notes, created_at, updated_at
+      INSERT INTO feeding_records (client_id, feeding_time, food_type, notes)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, client_id, feeding_time, food_type, notes, created_at, updated_at
     `
 
-    const result = await query(sql, [utcTime, food_type || '', notes || ''])
+    const result = await query(sql, [clientId, utcTime, food_type || '', notes || ''])
 
     if (result.rows.length === 0) {
       throw createError({

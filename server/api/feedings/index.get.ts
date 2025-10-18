@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
 
     // Build the SQL query
     let sql = `
-      SELECT id, feeding_time, food_type, notes, created_at, updated_at
+      SELECT id, client_id, feeding_time, food_type, notes, created_at, updated_at
       FROM feeding_records
     `
     

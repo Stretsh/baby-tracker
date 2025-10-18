@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
       UPDATE feeding_records 
       SET feeding_time = $1, food_type = $2, notes = $3, updated_at = NOW()
       WHERE id = $4
-      RETURNING id, feeding_time, food_type, notes, created_at, updated_at
+      RETURNING id, client_id, feeding_time, food_type, notes, created_at, updated_at
     `
 
     const result = await query(sql, [utcTime, food_type || '', notes || '', id])
