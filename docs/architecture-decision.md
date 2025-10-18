@@ -306,10 +306,33 @@ App Components → Dexie (always, regardless of online status)
 - [x] Green for online, red for offline
 - [x] No manual sync; page refresh already triggers sync
 
-### Phase 7: Configure PWA
-- Set `ssr: false` in `nuxt.config.ts`
-- Ensure Dexie loads in both app and SW contexts
-- Clean up unused server endpoints and composables
+### Phase 7: Configure PWA — COMPLETED
+- [x] Set `ssr: false` in `nuxt.config.ts`
+- [x] Ensure Dexie loads in both app and SW contexts
+- [x] Clean up unused server endpoints and composables
+
+### Phase 7.5: Server Reachability Detection — COMPLETED
+
+**Problem Identified:**
+The current implementation only checks `navigator.onLine` for sync status, but this doesn't account for the home network scenario:
+
+- **Home Network**: App runs on local FQDN (e.g., `baby-tracker.local`)
+- **Outside Network**: Phone has internet (`navigator.onLine = true`) but can't reach home server
+- **Current Issue**: Status bar shows green (online) but sync fails silently
+- **User Impact**: No indication that server is unreachable, operations queue but don't sync
+
+**Required Solution:**
+- [x] Detect server unreachability (network timeouts, DNS failures)
+- [x] Update status bar to show server connectivity (not just browser online)
+- [x] Handle network-specific offline mode (online but can't reach home server)
+- [x] Implement server health checks with timeout handling
+- [x] Update sync logic to distinguish between "offline" and "server unreachable"
+- [x] Optimize health check frequency (60 seconds for battery efficiency)
+
+**Status Bar States:**
+- 🟢 **Green**: Online + Server reachable + Synced
+- 🔴 **Red**: Offline OR Server unreachable
+- 🟡 **Yellow**: Online + Server reachable + Syncing (optional)
 
 ### Phase 8: Testing
 - Test offline CRUD operations
