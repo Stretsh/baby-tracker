@@ -13,6 +13,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const lastSyncCutoff = lastSync ? new Date(lastSync) : null
+
     const serverRecords = []
     const conflicts = []
 
@@ -43,25 +45,23 @@ export default defineEventHandler(async (event) => {
 
       try {
         if (op === 'create') {
-          // Insert new record
+          // Server owns created_at / updated_at (column defaults)
           const insertQuery = `
-            INSERT INTO feeding_records (client_id, feeding_time, food_type, notes, updated_at)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO feeding_records (client_id, feeding_time, food_type, notes)
+            VALUES ($1, $2, $3, $4)
             RETURNING client_id, feeding_time, food_type, notes, updated_at
           `
           const result = await query(insertQuery, [
             client_id,
             payload.feeding_time,
             payload.food_type,
-            payload.notes,
-            payload.updated_at
+            payload.notes
           ])
           
           // Add to server records for client to update local
           serverRecords.push(result.rows[0])
 
         } else if (op === 'update') {
-          // Check for conflicts by comparing updated_at
           const conflictCheckQuery = `
             SELECT updated_at FROM feeding_records 
             WHERE client_id = $1
@@ -70,11 +70,9 @@ export default defineEventHandler(async (event) => {
           
           if (conflictResult.rows.length > 0) {
             const serverUpdatedAt = new Date(conflictResult.rows[0].updated_at)
-            const clientUpdatedAt = new Date(payload.updated_at)
             
-            // If server was updated after client's last sync, it's a conflict
-            if (serverUpdatedAt > clientUpdatedAt) {
-              // Get current server record for conflict
+            // Server changed since this device's last successful sync — stale client update
+            if (lastSyncCutoff && serverUpdatedAt > lastSyncCutoff) {
               const serverRecordQuery = `
                 SELECT client_id, feeding_time, food_type, notes, updated_at
                 FROM feeding_records 
@@ -91,10 +89,9 @@ export default defineEventHandler(async (event) => {
             }
           }
 
-          // No conflict - proceed with update
           const updateQuery = `
             UPDATE feeding_records 
-            SET feeding_time = $2, food_type = $3, notes = $4, updated_at = $5
+            SET feeding_time = $2, food_type = $3, notes = $4, updated_at = NOW()
             WHERE client_id = $1
             RETURNING client_id, feeding_time, food_type, notes, updated_at
           `
@@ -102,8 +99,7 @@ export default defineEventHandler(async (event) => {
             client_id,
             payload.feeding_time,
             payload.food_type,
-            payload.notes,
-            payload.updated_at
+            payload.notes
           ])
           
           if (result.rows.length > 0) {
@@ -111,7 +107,6 @@ export default defineEventHandler(async (event) => {
           }
 
         } else if (op === 'delete') {
-          // Check if record exists and handle conflicts
           const conflictCheckQuery = `
             SELECT updated_at FROM feeding_records 
             WHERE client_id = $1
@@ -120,11 +115,8 @@ export default defineEventHandler(async (event) => {
           
           if (conflictResult.rows.length > 0) {
             const serverUpdatedAt = new Date(conflictResult.rows[0].updated_at)
-            const clientUpdatedAt = new Date(payload.updated_at)
             
-            // If server was updated after client's last sync, it's a conflict
-            if (serverUpdatedAt > clientUpdatedAt) {
-              // Get current server record for conflict
+            if (lastSyncCutoff && serverUpdatedAt > lastSyncCutoff) {
               const serverRecordQuery = `
                 SELECT client_id, feeding_time, food_type, notes, updated_at
                 FROM feeding_records 
@@ -141,7 +133,6 @@ export default defineEventHandler(async (event) => {
             }
           }
 
-          // No conflict - proceed with delete
           const deleteQuery = `
             DELETE FROM feeding_records 
             WHERE client_id = $1
@@ -156,10 +147,16 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    const nowResult = await query('SELECT NOW() AS server_now')
+    const rawNow = nowResult.rows[0].server_now
+    const serverNow =
+      rawNow instanceof Date ? rawNow.toISOString() : String(rawNow)
+
     return {
       serverRecords,
       conflicts,
-      success: true
+      success: true,
+      serverNow
     }
 
   } catch (error) {

@@ -236,6 +236,19 @@ const checkSyncQueue = async () => {
   }
 };
 
+// Push payload: only domain fields — created_at / updated_at are server-owned
+const syncPayloadForOperation = (op) => {
+  if (op.operation === 'delete') {
+    return { client_id: op.client_id };
+  }
+  const p = op.payload || {};
+  return {
+    feeding_time: p.feeding_time,
+    food_type: p.food_type ?? '',
+    notes: p.notes ?? ''
+  };
+};
+
 // Perform actual sync with server
 const performSync = async (database, pendingOps) => {
   try {
@@ -248,7 +261,7 @@ const performSync = async (database, pendingOps) => {
       pendingOperations: pendingOps.map(op => ({
         operation: op.operation,
         client_id: op.client_id,
-        payload: op.payload
+        payload: syncPayloadForOperation(op)
       }))
     };
     
@@ -286,8 +299,12 @@ const performSync = async (database, pendingOps) => {
       await database.sync_queue.where('client_id').anyOf(syncedClientIds).delete();
     }
     
-    // Update last sync timestamp
-    await updateLastSyncTimestamp(database, new Date().toISOString());
+    // Server clock watermark (same timeline as feeding_records.updated_at)
+    const serverNow = syncResult.serverNow;
+    if (typeof serverNow !== 'string' || !serverNow) {
+      throw new Error('Sync response missing serverNow');
+    }
+    await updateLastSyncTimestamp(database, serverNow);
     
     console.log('Service Worker: Sync completed successfully');
     
