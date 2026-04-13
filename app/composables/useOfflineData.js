@@ -61,6 +61,16 @@ export const useOfflineData = () => {
         retry_count: 0
       })
       
+      // Trigger immediate sync if online
+      if (navigator.onLine && 'serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready
+          registration.active?.postMessage({ type: 'CHECK_SYNC' })
+        } catch (error) {
+          console.log('Failed to trigger sync:', error)
+        }
+      }
+      
       return { id, ...record }
     } catch (error) {
       console.error('Failed to create feeding record:', error)
@@ -133,6 +143,16 @@ export const useOfflineData = () => {
         retry_count: 0
       })
       
+      // Trigger immediate sync if online
+      if (navigator.onLine && 'serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready
+          registration.active?.postMessage({ type: 'CHECK_SYNC' })
+        } catch (error) {
+          console.log('Failed to trigger sync:', error)
+        }
+      }
+      
       return updatedRecord
     } catch (error) {
       console.error('Failed to update feeding record:', error)
@@ -160,6 +180,16 @@ export const useOfflineData = () => {
         created_at: getCurrentTimestamp(),
         retry_count: 0
       })
+      
+      // Trigger immediate sync if online
+      if (navigator.onLine && 'serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready
+          registration.active?.postMessage({ type: 'CHECK_SYNC' })
+        } catch (error) {
+          console.log('Failed to trigger sync:', error)
+        }
+      }
       
       return true
     } catch (error) {
