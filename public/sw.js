@@ -97,9 +97,8 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => {
       console.log('Service Worker activated');
-      // Trigger initial sync when service worker activates
-      performFullSync();
-      return self.clients.claim();
+      // Claim clients before sync so postMessage targets exist
+      return self.clients.claim().then(() => performFullSync());
     })
   );
 });
@@ -218,18 +217,15 @@ const checkSyncQueue = async () => {
   
   try {
     const database = await initDatabase();
-    const pendingCount = await database.sync_queue.count();
-    
-    if (pendingCount > 0) {
-      console.log(`Service Worker: Found ${pendingCount} pending sync operations`);
-      
-      // Get pending operations
-      const pendingOps = await database.sync_queue.toArray();
+    const pendingOps = await database.sync_queue.toArray();
+    // Always run performSync (even with empty queue) so PULL runs on the timer
+    if (pendingOps.length > 0) {
+      console.log(`Service Worker: Found ${pendingOps.length} pending sync operations`);
       console.log('Pending operations:', pendingOps);
-      
-      // Perform sync
-      await performSync(database, pendingOps);
+    } else {
+      console.log('Service Worker: Periodic sync — queue empty, still pulling from server');
     }
+    await performSync(database, pendingOps);
     
     // Notify app that server is reachable
     await notifyApp('server-status', { reachable: true, online: true });
@@ -286,7 +282,9 @@ const performSync = async (database, pendingOps) => {
     
     // Remove successfully synced operations from queue
     const syncedClientIds = pendingOps.map(op => op.client_id);
-    await database.sync_queue.where('client_id').anyOf(syncedClientIds).delete();
+    if (syncedClientIds.length > 0) {
+      await database.sync_queue.where('client_id').anyOf(syncedClientIds).delete();
+    }
     
     // Update last sync timestamp
     await updateLastSyncTimestamp(database, new Date().toISOString());
@@ -336,13 +334,16 @@ const processServerRecords = async (database, serverRecords) => {
       const existing = await database.feeding_records.where('client_id').equals(record.client_id).first();
       
       if (existing) {
-        // Update existing record
-        await database.feeding_records.update(record.client_id, {
-          feeding_time: record.feeding_time,
-          food_type: record.food_type,
-          notes: record.notes,
-          updated_at: record.updated_at
-        });
+        // Primary key is ++id — update by client_id index
+        await database.feeding_records
+          .where('client_id')
+          .equals(record.client_id)
+          .modify({
+            feeding_time: record.feeding_time,
+            food_type: record.food_type,
+            notes: record.notes,
+            updated_at: record.updated_at
+          });
         console.log(`Service Worker: Updated record ${record.client_id}`);
       } else {
         // Insert new record
@@ -424,7 +425,10 @@ self.addEventListener('offline', () => {
 // Notify app about sync events
 const notifyApp = async (type, data) => {
   try {
-    const clients = await self.clients.matchAll();
+    const clients = await self.clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    })
     clients.forEach(client => {
       client.postMessage({
         type: type,
@@ -438,6 +442,18 @@ const notifyApp = async (type, data) => {
   }
 };
 
+// Debounced sync to prevent too many rapid syncs
+let syncTimeout = null;
+const debouncedSync = () => {
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+  }
+  syncTimeout = setTimeout(() => {
+    checkSyncQueue();
+    syncTimeout = null;
+  }, 2000); // 2 second debounce as per documentation
+};
+
 // Message handling for app communication
 self.addEventListener('message', (event) => {
   console.log('Service Worker received message:', event.data);
@@ -447,7 +463,7 @@ self.addEventListener('message', (event) => {
   }
   
   if (event.data && event.data.type === 'CHECK_SYNC') {
-    checkSyncQueue();
+    debouncedSync();
   }
   
   if (event.data && event.data.type === 'CHECK_SERVER') {
