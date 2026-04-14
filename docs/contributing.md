@@ -25,7 +25,9 @@ Thank you for your interest in contributing to Baby Tracker! This document provi
    ```bash
    createdb baby_feeding
    psql baby_feeding < schema.sql
+   psql baby_feeding < scripts/add-client-id-migration.sql
    ```
+   The migration adds **`client_id`** and indexes required for offline-first sync. Existing databases may need a one-time backfill of UUIDs for old rows (see `scripts/` and docs).
 
 5. **Start the development server**
    ```bash

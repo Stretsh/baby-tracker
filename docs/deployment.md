@@ -218,23 +218,17 @@ chmod +x backup.sh
 
 ### 3. Health Checks
 
-Create a simple health check endpoint:
+The app ships with **`GET /api/health`** in `server/api/health.get.ts` (alongside **`POST /api/sync`** for data sync). It runs a trivial SQL query (`SELECT 1`) and returns JSON such as:
 
-```javascript
-// app/server/api/health.get.js
-export default defineEventHandler(async (event) => {
-  try {
-    // Check database connection
-    await $fetch('/api/feedings?limit=1')
-    return { status: 'healthy', timestamp: new Date().toISOString() }
-  } catch (error) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Health check failed'
-    })
-  }
-})
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-01-15T12:00:00.000Z",
+  "database": "connected"
+}
 ```
+
+Use this URL from your process manager, reverse proxy, or monitoring; the service worker also calls it to tell “server reachable” from “browser online.”
 
 ## Troubleshooting
 

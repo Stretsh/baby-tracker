@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- ✅ Offline-first data layer: IndexedDB (Dexie) in the app, service worker sync, single **`POST /api/sync`** plus **`GET /api/health`**
+- ✅ Server-owned **`created_at`** / **`updated_at`** and **`serverNow`** watermark for incremental pull
 - ✅ PWA (Progressive Web App) functionality - **COMPLETED**
 - ✅ App installation support for mobile and desktop - **COMPLETED**
 - ✅ Service worker for offline caching - **COMPLETED**
@@ -35,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Graceful handling of empty feeding history and edge cases
 
 ### Changed
+- ✅ **API model**: per-record REST (`/api/feedings`, `/api/food-types`, …) replaced by local-first storage and the sync endpoint above; documentation updated to match
 - ✅ Default history view changed from list to time button grid - **COMPLETED**
 - ✅ History view now supports two display modes with toggle button - **COMPLETED**
 

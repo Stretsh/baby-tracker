@@ -2,12 +2,14 @@
 
 ## Overview
 
-The API follows RESTful principles and uses Nuxt 4's server API routes. All endpoints return JSON responses and handle errors gracefully.
+The server exposes a small JSON API used by the **service worker** for background synchronization and reachability checks. The Nuxt app itself does **not** call per-record REST endpoints for normal feeding CRUD: that work happens in **IndexedDB (Dexie)** on the client, and changes are queued for the worker to push.
+
+Older documentation described many REST routes (`/api/feedings`, `/api/food-types`, …). Those routes are **not** part of the current app; food suggestions and history come from **local** data.
 
 ## Base URL
 
 - Development: `http://localhost:3300/api`
-- Production: `http://[your-local-ip]:3300/api`
+- Production: same origin as your deployed app (e.g. `https://your-host/api`)
 
 ## Authentication
 
@@ -15,239 +17,129 @@ For local network use, no authentication is required. Future versions could add 
 
 ## Endpoints
 
-### Feeding Records
+### Health
 
-#### GET `/api/feedings`
-Get all feeding records with optional filtering and sorting.
+#### GET `/api/health`
 
-**Query Parameters:**
-- `sort`: `asc` | `desc` (default: `desc`)
-- `limit`: Number of records to return (default: 50)
-- `offset`: Number of records to skip (default: 0)
-- `search`: Search term for food type and notes
+Lightweight check that the server and database are reachable.
+
+**Response (success):**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-01-15T12:00:00.000Z",
+  "database": "connected"
+}
+```
+
+**Errors:** `500` if the database query fails.
+
+Used by the service worker to distinguish “browser online” from “app backend actually reachable.”
+
+---
+
+### Sync
+
+#### POST `/api/sync`
+
+Single endpoint for **incremental pull** and **push** of queued operations. The service worker sends the device’s last successful sync watermark (`lastSync`, an ISO timestamp from the **previous** response’s `serverNow`) and an array of pending operations built from the local sync queue.
+
+**Request body:**
+```json
+{
+  "lastSync": "2026-01-15T11:59:00.000Z",
+  "pendingOperations": [
+    {
+      "operation": "create",
+      "client_id": "550e8400-e29b-41d4-a716-446655440000",
+      "payload": {
+        "feeding_time": "2026-01-15T11:30:00.000Z",
+        "food_type": "Breast milk",
+        "notes": ""
+      }
+    },
+    {
+      "operation": "update",
+      "client_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "payload": {
+        "feeding_time": "2026-01-15T11:35:00.000Z",
+        "food_type": "Banana",
+        "notes": "Snack"
+      }
+    },
+    {
+      "operation": "delete",
+      "client_id": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+      "payload": {
+        "client_id": "6ba7b811-9dad-11d1-80b4-00c04fd430c8"
+      }
+    }
+  ]
+}
+```
+
+- **`lastSync`**: `null` or omitted on first sync for that device’s stored cursor; afterwards, the value returned as **`serverNow`** from the last successful sync.
+- **`payload`** for `create` / `update` contains only **domain fields** (`feeding_time`, `food_type`, `notes`). **`created_at`** and **`updated_at`** are set by the server.
+
+**Processing order (conceptually):**
+
+1. **Pull:** rows in `feeding_records` with `updated_at` **greater than** `lastSync` (if `lastSync` is set); otherwise all rows.
+2. **Push:** apply each pending operation (insert / update / delete) with server-owned timestamps and optional conflict handling (see server implementation).
 
 **Response:**
 ```json
 {
-  "feedings": [
+  "serverRecords": [
     {
-      "id": 1,
-      "feeding_time": "2024-01-15T19:00:00Z",
-      "food_type": "Rice cereal",
-      "notes": "Evening meal",
-      "created_at": "2024-01-15T19:05:00Z",
-      "updated_at": "2024-01-15T19:05:00Z"
+      "client_id": "550e8400-e29b-41d4-a716-446655440000",
+      "feeding_time": "2026-01-15T11:30:00.000Z",
+      "food_type": "Breast milk",
+      "notes": "",
+      "updated_at": "2026-01-15T12:00:01.234Z"
     }
   ],
-  "total": 1,
-  "limit": 50,
-  "offset": 0
-}
-```
-
-#### POST `/api/feedings`
-Create a new feeding record.
-
-**Request Body:**
-```json
-{
-  "feeding_time": "2024-01-15T19:00:00Z",
-  "food_type": "Rice cereal",
-  "notes": "Evening meal"
-}
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "feeding_time": "2024-01-15T19:00:00Z",
-  "food_type": "Rice cereal",
-  "notes": "Evening meal",
-  "created_at": "2024-01-15T19:05:00Z",
-  "updated_at": "2024-01-15T19:05:00Z"
-}
-```
-
-#### PUT `/api/feedings/:id`
-Update an existing feeding record.
-
-**Request Body:**
-```json
-{
-  "feeding_time": "2024-01-15T19:15:00Z",
-  "food_type": "Rice cereal with banana",
-  "notes": "Evening meal - added banana"
-}
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "feeding_time": "2024-01-15T19:15:00Z",
-  "food_type": "Rice cereal with banana",
-  "notes": "Evening meal - added banana",
-  "created_at": "2024-01-15T19:05:00Z",
-  "updated_at": "2024-01-15T19:20:00Z"
-}
-```
-
-#### DELETE `/api/feedings/:id`
-Delete a feeding record.
-
-**Response:**
-```json
-{
+  "conflicts": [],
   "success": true,
-  "message": "Feeding record deleted successfully"
+  "serverNow": "2026-01-15T12:00:02.500Z"
 }
 ```
 
-### Food Types
+- **`serverRecords`**: rows to merge into the client (including echoes of successful pushes and changes from other devices).
+- **`conflicts`**: reserved for concurrent-edit handling; shape is implementation-defined.
+- **`serverNow`**: server clock at end of the request; the client **must** persist this as **`lastSync`** for the next incremental pull so cursors stay on the **server** timeline.
 
-#### GET `/api/food-types`
-Get list of unique food types for autocomplete.
-
-**Query Parameters:**
-- `search`: Filter food types by name
-- `limit`: Maximum number of results (default: 20)
-
-**Response:**
-```json
-{
-  "food_types": [
-    "Breast milk",
-    "Banana",
-    "Rice cereal",
-    "Apple",
-    "Yogurt"
-  ]
-}
-```
-
-#### GET `/api/food-types/recent`
-Get recently used food types for quick buttons.
-
-**Query Parameters:**
-- `limit`: Number of recent foods (default: 8)
-
-**Response:**
-```json
-{
-  "recent_foods": [
-    "Breast milk",
-    "Banana",
-    "Rice cereal",
-    "Apple"
-  ]
-}
-```
+---
 
 ## Error Handling
 
-All endpoints return consistent error responses:
+Failed requests use Nuxt / Nitro error responses (e.g. `400` for invalid body, `500` on server errors). The sync handler validates that `pendingOperations` is an array.
 
-```json
-{
-  "error": true,
-  "message": "Error description",
-  "code": "ERROR_CODE",
-  "details": {} // Optional additional error details
-}
-```
+## Data validation (domain)
 
-**Common Error Codes:**
-- `VALIDATION_ERROR`: Invalid request data
-- `NOT_FOUND`: Resource not found
-- `DATABASE_ERROR`: Database operation failed
-- `INTERNAL_ERROR`: Server error
+- **`feeding_time`**: required for creates; ISO 8601 timestamp (interpreted with time zone where applicable).
+- **`food_type`** / **`notes`**: strings; may be empty.
 
-## Data Validation
+Validation details may also be enforced in the client composables before queueing.
 
-### Feeding Record Validation
-- `feeding_time`: Required, valid ISO 8601 timestamp
-- `food_type`: Required, string, max 255 characters
-- `notes`: Optional, string, max 1000 characters
-
-### Example Validation Errors
-```json
-{
-  "error": true,
-  "message": "Validation failed",
-  "code": "VALIDATION_ERROR",
-  "details": {
-    "feeding_time": "Required field",
-    "food_type": "Must be less than 255 characters"
-  }
-}
-```
-
-## Rate Limiting
+## Rate limiting
 
 For local network use, no rate limiting is implemented. Future versions could add basic rate limiting.
 
 ## CORS
 
-Configured to allow requests from any origin on the local network.
+Same-origin deployment is assumed for the PWA and service worker. Broader CORS would be a deployment concern if you split origins.
 
-## Database Connection
+## Database connection
 
-Uses direct PostgreSQL queries with `pg` library for database operations with connection pooling and error handling.
+Server routes use the shared `pg`-based helper in `server/utils/database.ts` with pooling and error handling.
 
-## Example API Usage
+## Example: sync from the service worker
 
-### Create a feeding record
-```javascript
-const response = await fetch('/api/feedings', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    feeding_time: new Date().toISOString(),
-    food_type: 'Breast milk',
-    notes: 'Morning feeding'
-  })
-});
+The worker builds the body from IndexedDB (`sync_metadata.lastSync`, `sync_queue`), `POST`s to `/api/sync`, applies `serverRecords` to Dexie, clears processed queue entries, and stores **`serverNow`** back into `sync_metadata`.
 
-const feeding = await response.json();
-```
+## Future enhancements
 
-### Get recent feedings
-```javascript
-const response = await fetch('/api/feedings?sort=desc&limit=10');
-const data = await response.json();
-console.log(data.feedings);
-```
-
-### Get food suggestions
-```javascript
-const response = await fetch('/api/food-types?search=breast');
-const data = await response.json();
-console.log(data.food_types); // ["Breast milk"]
-```
-
-### Quick save (current time only)
-```javascript
-const response = await fetch('/api/feedings', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    feeding_time: new Date().toISOString(),
-    food_type: '',
-    notes: ''
-  })
-});
-
-const feeding = await response.json();
-```
-
-## Future Enhancements
-
-- **Bulk Operations**: Import/export feeding data
-- **Statistics**: Daily/weekly feeding summaries
-- **Notifications**: Reminder system for feeding times
-- **Backup**: Automatic data backup to cloud storage
+- **Bulk operations**: import/export of feeding data through sync or separate tools
+- **Statistics**: aggregates on the server or client
+- **Notifications**: feeding reminders
+- **Backup**: scheduled database backups (see deployment guide)
