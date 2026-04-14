@@ -91,7 +91,7 @@
     
     <!-- Edit/Delete Modal (using existing FeedingModal) -->
     <FeedingModal
-      v-if="showEditModal || showDeleteModal"
+      v-if="(showEditModal || showDeleteModal) && preparedFeedingData"
       :feeding-data="preparedFeedingData"
       :is-delete="showDeleteModal"
       :is-updating="isUpdating"
@@ -120,7 +120,7 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 // Use global state instead of props
-const { feedings } = useFeedings()
+const { feedings, updateFeeding, removeFeeding } = useOfflineFeedings()
 const { showSuccess, showError } = useToast()
 
 // Get the current feeding from global state
@@ -169,11 +169,15 @@ const handleSubmit = async (formData) => {
   
   isUpdating.value = true
   try {
-    await $fetch(`/api/feedings/${feeding.value.id}`, {
-      method: 'PUT',
-      body: formData
-    })
-    // No need to emit - global state will be updated by the API response
+    const feedingData = {
+      feeding_time: formData.feeding_time 
+        ? DateTime.fromISO(formData.feeding_time).toUTC().toISO()
+        : new Date().toISOString(),
+      food_type: formData.food_type,
+      notes: formData.notes
+    }
+    
+    await updateFeeding(feeding.value.id, feedingData)
     showSuccess('Feeding updated successfully')
     closeEditModal()
     // Keep details modal open to show updated information
@@ -190,15 +194,7 @@ const handleDelete = async () => {
   
   isDeleting.value = true
   try {
-    await $fetch(`/api/feedings/${feeding.value.id}`, {
-      method: 'DELETE'
-    })
-    
-    // Update global state - remove the deleted feeding
-    const { setFeedings } = useFeedings()
-    const currentFeedings = feedings.value.filter(f => f.id !== feeding.value.id)
-    setFeedings(currentFeedings)
-    
+    await removeFeeding(feeding.value.id)
     showSuccess('Feeding deleted successfully')
     closeEditModal()
     closeModal() // Close the details modal too

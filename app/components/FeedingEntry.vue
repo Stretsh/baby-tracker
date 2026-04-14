@@ -73,7 +73,7 @@ const isUpdating = ref(false)
 const isDeleting = ref(false)
 
 // Composables
-const { updateFeeding: updateFeedingInStore, removeFeeding } = useFeedings()
+const { updateFeeding: updateFeedingInStore, removeFeeding } = useOfflineFeedings()
 const { showSuccess, showError } = useToast()
 
 const formatTime = (dateString) => {
@@ -106,22 +106,15 @@ const updateFeeding = async (formData) => {
   isUpdating.value = true
   
   try {
-    const response = await $fetch(`/api/feedings/${props.feeding.id}`, {
-      method: 'PUT',
-      body: {
-        feeding_time: formData.feeding_time,
-        food_type: formData.food_type,
-        notes: formData.notes
-      }
-    })
-    
-    if (response.success) {
-      updateFeedingInStore(response.feeding)
-      closeModal()
-      emit('updated', response.feeding)
-    } else {
-      showError(response.message)
+    const feedingData = {
+      feeding_time: formData.feeding_time,
+      food_type: formData.food_type,
+      notes: formData.notes
     }
+    
+    const updatedFeeding = await updateFeedingInStore(props.feeding.id, feedingData)
+    closeModal()
+    emit('updated', updatedFeeding)
   } catch (error) {
     console.error('Update failed:', error)
     showError('Update failed. Please try again.')
@@ -134,18 +127,10 @@ const confirmDelete = async () => {
   isDeleting.value = true
   
   try {
-    const response = await $fetch(`/api/feedings/${props.feeding.id}`, {
-      method: 'DELETE'
-    })
-    
-    if (response.success) {
-      removeFeeding(response.feedingId)
-      showSuccess(response.message)
-      closeModal()
-      emit('deleted', response.feedingId)
-    } else {
-      showError(response.message)
-    }
+    await removeFeeding(props.feeding.id)
+    showSuccess('Feeding deleted successfully')
+    closeModal()
+    emit('deleted', props.feeding.id)
   } catch (error) {
     console.error('Delete failed:', error)
     showError('Delete failed. Please try again.')

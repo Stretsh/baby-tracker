@@ -55,22 +55,88 @@ import { DateTime } from 'luxon'
 
 const isLoading = ref(false)
 const showFoodButtons = ref(false)
-const { addFeeding, feedings } = useFeedings()
+const { feedings, quickSave: offlineQuickSave, saveWithFood: offlineSaveWithFood } = useOfflineFeedings()
 const { showSuccess, showError } = useToast()
 
 // Real-time timer for updates
 const currentTime = ref(DateTime.now())
 
-// Fetch recent food types (top 3 most used)
-const { data: recentFoodsData } = await useFetch('/api/food-types/recent', {
-  query: { limit: 3 },
-  default: () => ({ recent_foods: [] })
+// Get recent food types from offline data
+const { getFeedingRecords } = useOfflineData()
+const top3Foods = ref([])
+
+// Load recent foods from offline data
+const loadRecentFoods = async () => {
+  try {
+    const records = await getFeedingRecords({ limit: 50 })
+    const foodCounts = {}
+    
+    // Count food types
+    records.forEach(record => {
+      if (record.food_type && record.food_type.trim()) {
+        foodCounts[record.food_type] = (foodCounts[record.food_type] || 0) + 1
+      }
+    })
+    
+    // Sort by count and get top 3, then reverse to show most used at bottom
+    const sortedFoods = Object.entries(foodCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3)
+      .map(([food]) => food)
+      .reverse() // Reverse to show most used at bottom
+    
+    top3Foods.value = sortedFoods
+  } catch (error) {
+    console.error('Failed to load recent foods:', error)
+    top3Foods.value = []
+  }
+}
+
+// Get the most recent feeding
+const lastFeeding = computed(() => {
+  return feedings.value && feedings.value.length > 0 ? feedings.value[0] : null
 })
 
-// Sort bottom to top (most used at bottom)
-const top3Foods = computed(() => {
-  const foods = recentFoodsData.value?.recent_foods || []
-  return [...foods].reverse() // Reverse to show most used at bottom
+// Calculate time display
+const timeDisplay = computed(() => {
+  if (!lastFeeding.value) return null
+  
+  const diff = currentTime.value.diff(DateTime.fromISO(lastFeeding.value.feeding_time), 'minutes')
+  const minutes = Math.floor(diff.minutes)
+  
+  // Special case: "Just fed" for anything under 1 minute (including negative values)
+  if (minutes < 1) return 'Just fed'
+  
+  // Less than an hour: show minutes
+  if (minutes < 60) return `${minutes}m since last`
+  
+  // One hour or more: show hours and minutes
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  
+  if (remainingMinutes === 0) return `${hours}h since last`
+  return `${hours}h ${remainingMinutes}m since last`
+})
+
+// Calculate button color classes based on time elapsed
+const buttonClasses = computed(() => {
+  const baseClasses = 'text-white hover:opacity-90 disabled:opacity-50'
+  
+  if (!lastFeeding.value) {
+    return `${baseClasses} bg-green-600 hover:bg-green-700`
+  }
+  
+  const diff = currentTime.value.diff(DateTime.fromISO(lastFeeding.value.feeding_time), 'hours')
+  const hours = diff.hours
+  
+  // Simple color thresholds
+  if (hours < 3) {
+    return `${baseClasses} bg-green-600 hover:bg-green-700` // Green
+  } else if (hours < 4) {
+    return `${baseClasses} bg-orange-500 hover:bg-orange-600` // Orange
+  } else {
+    return `${baseClasses} bg-red-600 hover:bg-red-700` // Red
+  }
 })
 
 // Get the most recent feeding
@@ -128,23 +194,9 @@ const saveWithFood = async (food) => {
   isLoading.value = true
   
   try {
-    const response = await $fetch('/api/feedings', {
-      method: 'POST',
-      body: {
-        feeding_time: DateTime.now().toISO(),
-        food_type: food,
-        notes: ''
-      }
-    })
-    
-    if (response.success) {
-      addFeeding(response.feeding)
-      showSuccess(response.message)
-      showFoodButtons.value = false
-    } else {
-      showError(response.message)
-    }
-    
+    await offlineSaveWithFood(food, '')
+    showSuccess('Feeding saved successfully')
+    showFoodButtons.value = false
   } catch (error) {
     console.error('Quick food save failed:', error)
     showError('Save failed. Please try again.')
@@ -157,22 +209,8 @@ const quickSave = async () => {
   isLoading.value = true
   
   try {
-    const response = await $fetch('/api/feedings', {
-      method: 'POST',
-      body: {
-        feeding_time: DateTime.now().toISO(),
-        food_type: '',
-        notes: ''
-      }
-    })
-    
-    if (response.success) {
-      addFeeding(response.feeding)
-      showSuccess(response.message)
-    } else {
-      showError(response.message)
-    }
-    
+    await offlineQuickSave('', '')
+    showSuccess('Feeding saved successfully')
   } catch (error) {
     console.error('Quick save failed:', error)
     showError('Save failed. Please try again.')
@@ -186,6 +224,9 @@ let timerInterval = null
 
 // Close food buttons when clicking outside
 onMounted(() => {
+  // Load recent foods
+  loadRecentFoods()
+  
   const handleClickOutside = (event) => {
     if (!event.target.closest('.fixed.bottom-24.right-6')) {
       showFoodButtons.value = false

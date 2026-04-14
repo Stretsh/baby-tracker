@@ -7,6 +7,9 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint'],
   css: ['~/assets/css/main.css'],
   
+  // PWA Configuration - Disable SSR for offline-first app
+  ssr: false,
+  
   // PWA Configuration
   app: {
     head: {

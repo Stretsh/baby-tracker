@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
-    <header class="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+    <header class="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-sm">
       <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
         <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
           Baby Tracker
@@ -11,8 +11,8 @@
           <button
             v-if="isInstallable && !isInstalled"
             class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-md transition-colors"
-            @click="installApp"
             title="Install App"
+            @click="installApp"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -33,6 +33,8 @@
           </button>
         </div>
       </div>
+      <!-- Sync Status Bar -->
+      <div class="h-0.5 w-full" :class="syncStatusClass"></div>
     </header>
 
     <!-- Main Content -->
@@ -61,17 +63,76 @@ const isDark = ref(false)
 const { toasts, removeToast } = useToast()
 const { isInstallable, isInstalled, installApp } = usePWA()
 
-// Initialize dark mode from localStorage or system preference
-onMounted(() => {
-  const savedTheme = localStorage.getItem('theme')
-  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+// Sync status (client-side only)
+const isOnline = ref(true) // Default to online, will be updated on client
+const serverReachable = ref(true) // Default to reachable, will be updated by service worker
+const syncStatusClass = computed(() => {
+  return (isOnline.value && serverReachable.value)
+    ? 'bg-green-500' // Online and server reachable
+    : 'bg-red-500'   // Offline OR server unreachable
+})
+
+// Sync will be handled by Service Worker
+
+  // Initialize dark mode from localStorage or system preference
+  onMounted(async () => {
+    // Initialize online status
+    isOnline.value = navigator.onLine
+    
+    const savedTheme = localStorage.getItem('theme')
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      isDark.value = true
+      document.documentElement.classList.add('dark')
+    } else {
+      isDark.value = false
+      document.documentElement.classList.remove('dark')
+    }
   
-  if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
-    isDark.value = true
-    document.documentElement.classList.add('dark')
-  } else {
-    isDark.value = false
-    document.documentElement.classList.remove('dark')
+  // Service Worker will handle sync initialization
+  // Register service worker
+  if (import.meta.client && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('Service Worker registered:', registration.scope);
+      })
+      .catch((error) => {
+        console.error('Service Worker registration failed:', error);
+      });
+    
+    // Listen for messages from service worker
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      console.log('App received message from Service Worker:', event.data);
+      
+      if (event.data.type === 'sync-complete') {
+        console.log('Sync completed:', event.data.data);
+        // Trigger UI refresh by dispatching a custom event
+        window.dispatchEvent(new CustomEvent('sync-complete', {
+          detail: event.data.data
+        }));
+      }
+      
+      if (event.data.type === 'server-status') {
+        console.log('Server status update:', event.data.data);
+        serverReachable.value = event.data.data.reachable;
+        isOnline.value = event.data.data.online;
+      }
+    });
+    
+    // Listen for online/offline events
+    window.addEventListener('online', () => {
+      isOnline.value = true;
+      // Trigger server reachability check when coming back online
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CHECK_SERVER' });
+      }
+    });
+    
+    window.addEventListener('offline', () => {
+      isOnline.value = false;
+      serverReachable.value = false;
+    });
   }
 })
 
