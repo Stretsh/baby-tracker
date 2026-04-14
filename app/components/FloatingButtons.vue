@@ -139,53 +139,6 @@ const buttonClasses = computed(() => {
   }
 })
 
-// Get the most recent feeding
-const lastFeeding = computed(() => {
-  return feedings.value && feedings.value.length > 0 ? feedings.value[0] : null
-})
-
-// Calculate time display
-const timeDisplay = computed(() => {
-  if (!lastFeeding.value) return null
-  
-  const diff = currentTime.value.diff(DateTime.fromISO(lastFeeding.value.feeding_time), 'minutes')
-  const minutes = Math.floor(diff.minutes)
-  
-  // Special case: "Just fed" for anything under 1 minute (including negative values)
-  if (minutes < 1) return 'Just fed'
-  
-  // Less than an hour: show minutes
-  if (minutes < 60) return `${minutes}m since last`
-  
-  // One hour or more: show hours and minutes
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-  
-  if (remainingMinutes === 0) return `${hours}h since last`
-  return `${hours}h ${remainingMinutes}m since last`
-})
-
-// Calculate button color classes based on time elapsed
-const buttonClasses = computed(() => {
-  const baseClasses = 'text-white hover:opacity-90 disabled:opacity-50'
-  
-  if (!lastFeeding.value) {
-    return `${baseClasses} bg-green-600 hover:bg-green-700`
-  }
-  
-  const diff = currentTime.value.diff(DateTime.fromISO(lastFeeding.value.feeding_time), 'hours')
-  const hours = diff.hours
-  
-  // Simple color thresholds
-  if (hours < 3) {
-    return `${baseClasses} bg-green-600 hover:bg-green-700` // Green
-  } else if (hours < 4) {
-    return `${baseClasses} bg-orange-500 hover:bg-orange-600` // Orange
-  } else {
-    return `${baseClasses} bg-red-600 hover:bg-red-700` // Red
-  }
-})
-
 const toggleFoodButtons = () => {
   showFoodButtons.value = !showFoodButtons.value
 }

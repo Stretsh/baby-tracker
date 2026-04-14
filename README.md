@@ -25,10 +25,13 @@ Anyone is welcome to contribute, but remember: this is primarily an AI coding ex
 - **Dark Mode**: Toggle between light and dark themes
 - **Mobile Responsive**: Works on phones, tablets, and desktops
 - **PWA Support**: Install as a native app on mobile and desktop
+- **Offline-first**: Feeding data lives in IndexedDB (Dexie) on the device; the UI works without hitting the network for every action
+- **Background sync**: A service worker talks to the server, pushes queued changes, and pulls updates; a thin status strip shows online vs server reachability
 
 ## Tech Stack
 
-- **Frontend**: Nuxt 4, Vue 3, TypeScript, Tailwind CSS 4
+- **Frontend**: Nuxt 4, Vue 3, TypeScript, Tailwind CSS 4 (app runs as an SPA for PWA / offline)
+- **Local data**: Dexie.js on top of IndexedDB
 - **Backend**: Nuxt Server API, PostgreSQL
 - **UI**: Custom HTML/CSS with Tailwind (no external UI library)
 - **Database**: PostgreSQL with pg driver
@@ -51,8 +54,11 @@ Anyone is welcome to contribute, but remember: this is primarily an AI coding ex
    # Create PostgreSQL database
    createdb baby_feeding
    
-   # Run schema
+   # Run base schema
    psql baby_feeding < schema.sql
+
+   # Offline-first sync requires client_id on feeding_records (see docs/database-schema.md)
+   psql baby_feeding < scripts/add-client-id-migration.sql
    ```
 
 4. **Start development server**:
@@ -61,6 +67,8 @@ Anyone is welcome to contribute, but remember: this is primarily an AI coding ex
    ```
    
    The app will be available at `http://localhost:3300`
+
+For production-style testing of the service worker (caching and sync), use a build and preview (`npm run build` then `npm run preview`) rather than the dev server alone.
 
 ## Environment Variables
 
@@ -76,13 +84,12 @@ DB_PASSWORD=your_password
 
 ## API Endpoints
 
-- `GET /api/feedings` - List all feeding records
-- `POST /api/feedings` - Create new feeding record
-- `PUT /api/feedings/:id` - Update feeding record
-- `DELETE /api/feedings/:id` - Delete feeding record
-- `GET /api/food-types` - Get food type suggestions
-- `GET /api/food-types/recent` - Get recently used foods
-- `GET /api/health` - Health check endpoint
+The browser app does **not** use per-record REST for day-to-day CRUD. It writes to IndexedDB and relies on the service worker to synchronize with the server.
+
+- **`POST /api/sync`** - Single sync endpoint: incremental pull (by last successful sync watermark) plus push of queued create/update/delete operations. Response includes **`serverNow`** (server clock); the client stores that as `lastSync` for the next pull. Row **`created_at`** / **`updated_at`** on the server are set only on the server.
+- **`GET /api/health`** - Health check (database connectivity); used by the service worker for reachability
+
+Food suggestions and history in the UI come from **local** feeding data, not separate food-type API routes.
 
 ## Project Structure
 
@@ -90,25 +97,30 @@ DB_PASSWORD=your_password
 baby-tracker/
 ├── app/                    # Nuxt 4 app directory
 │   ├── components/         # Vue components
+│   ├── composables/       # Offline data, feedings bridge, PWA, toast, etc.
 │   ├── layouts/           # Layout components
-│   ├── pages/             # Pages/routes
-│   └── assets/            # CSS and static assets
-├── server/                # Server-side code
-│   ├── api/               # API routes
-│   └── utils/             # Server utilities
-├── docs/                  # Documentation
-├── schema.sql             # Database schema
-└── nuxt.config.ts         # Nuxt configuration
+│   ├── pages/              # Pages/routes
+│   └── assets/             # CSS and static assets
+├── public/                 # Static assets (includes sw.js service worker)
+├── server/                 # Server-side code
+│   ├── api/                # API routes (sync, health)
+│   └── utils/              # Server utilities
+├── scripts/                # SQL migrations and helpers
+├── docs/                   # Documentation
+├── schema.sql              # Database schema
+└── nuxt.config.ts          # Nuxt configuration
 ```
 
 ## Documentation
 
-- [API Design](./docs/api-design.md) - API endpoint documentation
+- [API Design](./docs/api-design.md) - Sync and health API documentation
 - [Database Schema](./docs/database-schema.md) - Database structure
 - [Deployment Guide](./docs/deployment.md) - Production deployment
 - [UI Design](./docs/ui-design.md) - User interface specifications
 - [Changelog](./docs/changelog.md) - Version history
 - [Contributing](./docs/contributing.md) - Contribution guidelines
+- [Architecture decision](./docs/architecture-decision.md) - Offline-first and sync design notes
+- [Dexie schema](./docs/dexie-schema-design.md) - Local database layout
 
 ## Development
 
