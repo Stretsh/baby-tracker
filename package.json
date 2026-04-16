@@ -9,7 +9,7 @@
     "postinstall": "nuxt prepare"
   },
   "devDependencies": {
-    "@nuxt/eslint": "^0.5.2",
+    "@nuxt/eslint": "^0.7.5",
     "@tailwindcss/vite": "^4.1.0",
     "@types/luxon": "^3.7.1",
     "baseline-browser-mapping": "^2.10.18",
