@@ -1,6 +1,6 @@
 // Baby Tracker Service Worker - Based on Danny's Basic Service Worker
 // Version number for cache management
-const SW_VERSION = 1;
+const SW_VERSION = 2;
 
 // Service Worker version for cache management
 
@@ -413,18 +413,7 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// Register background sync when online
-const registerBackgroundSync = async () => {
-  if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      await registration.sync.register('baby-tracker-sync');
-      console.log('Service Worker: Background sync registered');
-    } catch (error) {
-      console.error('Service Worker: Failed to register background sync:', error);
-    }
-  }
-};
+// Background Sync registration is done from the page (useServiceWorkerSync.js); SW only handles the sync event.
 
 // Handle online/offline events
 self.addEventListener('online', () => {

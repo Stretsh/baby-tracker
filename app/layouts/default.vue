@@ -62,6 +62,7 @@
 const isDark = ref(false)
 const { toasts, removeToast } = useToast()
 const { isInstallable, isInstalled, installApp } = usePWA()
+const { setupServiceWorkerSyncTriggers } = useServiceWorkerSync()
 
 // Sync status (client-side only)
 const isOnline = ref(true) // Default to online, will be updated on client
@@ -133,6 +134,8 @@ const syncStatusClass = computed(() => {
       isOnline.value = false;
       serverReachable.value = false;
     });
+
+    setupServiceWorkerSyncTriggers()
   }
 })
 
